@@ -22,5 +22,12 @@ export const Prenda = sequelize.define('Prendas',{
   categoria: {
     type: DataTypes.ENUM('JEAN', 'BUZO', 'CAMPERA', 'REMERA', 'SHORT', 'OTRO'),
     allowNull: false
+<<<<<<< HEAD
+=======
+  },
+  imagen: {
+    type: DataTypes.STRING,
+    allowNull: false,
+>>>>>>> debugger
   }
 })
