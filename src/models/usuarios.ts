@@ -26,6 +26,13 @@ export const Usuario = sequelize.define('Usuarios', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+<<<<<<< HEAD
+=======
+  admin:{
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  }
+>>>>>>> debugger
 }, {
   timestamps: true,  //depende de la db tambien
 });
