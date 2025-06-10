@@ -1,13 +1,19 @@
 {
   "name": "backend",
   "version": "1.0.0",
+<<<<<<< HEAD
 
+=======
+>>>>>>> modifUIUX
   "main": "dist/Main.js",
   "scripts": {
     "dev": "ts-node-dev --respawn src/app.ts",
     "start:debug": "node --inspect -r ts-node/register src/app.ts",
     "start": "node dist/Main.js",
+<<<<<<< HEAD
 
+=======
+>>>>>>> modifUIUX
     "build": "tsc"
   },
   "keywords": [],
