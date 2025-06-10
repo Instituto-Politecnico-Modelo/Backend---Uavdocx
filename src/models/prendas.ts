@@ -23,11 +23,19 @@ export const Prenda = sequelize.define('Prendas',{
     type: DataTypes.ENUM('JEAN', 'BUZO', 'CAMPERA', 'REMERA', 'SHORT', 'OTRO'),
     allowNull: false
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+
+>>>>>>> modifUIUX
   },
   imagen: {
     type: DataTypes.STRING,
     allowNull: false,
+<<<<<<< HEAD
 >>>>>>> debugger
+=======
+
+>>>>>>> modifUIUX
   }
 })
