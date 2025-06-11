@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { Request, Response } from 'express';
 import { Usuario } from '../models/usuarios';
 import bcrypt from 'bcrypt';
@@ -6,8 +9,8 @@ import validator from 'validator';
 import { enviarCorreoVerificacion } from '../utils/email'; 
 import { enviarCorreoReset } from '../utils/email'; 
 
+const SECRET_KEY: string = process.env.CLAVE || '';
 
-const SECRET_KEY = 'uavdocx'; // igual que en el middleware
 
 export const registrarUsuario = async (req: Request, res: Response): Promise<void> => {
   const { usuario, email, contrasenia } = req.body;
@@ -39,25 +42,22 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
       verificado: false, 
     });
 
-    
     const tokenVerificacion = jwt.sign(
       { email },
       SECRET_KEY,
       { expiresIn: '1h' }
     );
 
-   
     await enviarCorreoVerificacion(email, tokenVerificacion);
 
     res.status(201).json({ mensaje: 'Usuario registrado. Revisa tu correo para confirmar tu cuenta.' });
-} catch (error: any) {
-  console.error('Error en registrarUsuario:', error);
-  res.status(500).json({
-    mensaje: 'Error al registrar usuario',
-    error: error.errors?.[0]?.message || error.message || error
-  });
-}
-
+  } catch (error: any) {
+    console.error('Error en registrarUsuario:', error);
+    res.status(500).json({
+      mensaje: 'Error al registrar usuario',
+      error: error.errors?.[0]?.message || error.message || error
+    });
+  }
 };
 
 export const comprobarUsuario = async (req: Request, res: Response): Promise<void> => {
@@ -118,7 +118,6 @@ export const verificarUsuario = async (req: Request, res: Response): Promise<voi
   }
 };
 
-
 export const solicitarResetContrasenia = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
 
@@ -145,9 +144,9 @@ export const solicitarResetContrasenia = async (req: Request, res: Response): Pr
 };
 
 export const resetearContrasenia = async (req: Request, res: Response): Promise<void> => {
-  const { token } = req.params || req.body.token;;
+  const token = req.params.token || req.body.token;
   const { nuevaContrasenia } = req.body;
-  console.log('Token recibido:', req.params.token);
+  console.log('Token recibido:', token);
 
   if (!nuevaContrasenia) {
     res.status(400).json({ mensaje: 'Falta la nueva contraseña' });

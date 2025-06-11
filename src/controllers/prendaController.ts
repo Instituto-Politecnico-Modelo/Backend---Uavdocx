@@ -9,6 +9,7 @@ export const crearPrenda = async (req: Request, res: Response) => {
     const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
 
 
+
     res.status(201).json(nuevaPrenda);
   } catch (error) {
     res.status(500).json({ error: 'Error con crear la prenda'});
@@ -23,6 +24,7 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error con obtener las prendas'});
   }
 };
+
 
 
 export const actualizarPrenda = async (req: Request, res: Response) => {

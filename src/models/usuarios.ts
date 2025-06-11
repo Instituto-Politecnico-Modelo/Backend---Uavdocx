@@ -20,13 +20,11 @@ export const Usuario = sequelize.define('Usuarios', {
   contrasenia: {
     type: DataTypes.STRING,
     allowNull: false,
-    //field: 'contraseña_hash', depende de la db
   },
   verificado:{
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-
 
 
   admin:{
@@ -36,5 +34,5 @@ export const Usuario = sequelize.define('Usuarios', {
 
 
 }, {
-  timestamps: true,  //depende de la db tambien
+  timestamps: true, 
 });

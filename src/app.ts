@@ -7,7 +7,7 @@ import prendaRoutes from './routes/prendaRoutes';
 import { authenticateToken } from './middleware/usuarios';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 
 app.use(cors());
 app.use(bodyParser.json());
