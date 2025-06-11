@@ -16,7 +16,7 @@ export const Prenda = sequelize.define('Prendas',{
     allowNull: false,
   },
   talles: {
-    type: DataTypes.JSON,// Para crear el hashmap seria ENUM('S', 'M', 'L', 'XL', '2XL', '3XL'), y la cantidad int
+    type: DataTypes.JSON,
     allowNull: false
   },
   categoria: {

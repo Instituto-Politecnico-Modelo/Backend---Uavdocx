@@ -4,15 +4,15 @@ export const enviarCorreoVerificacion = async (email: string, token: string) => 
   const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
-      user: 'multiuno51@gmail.com',
-      pass: 'nzgy odob leuu uubv',
+      user: process.env.USER,
+      pass: process.env.PASS,
     },
   });
 
   const enlace = `http://localhost:3000/usuarios/verificar/${token}`;
 
   const mailOptions = {
-    from: 'multiuno51@gmail.com',
+    from: process.env.USER,
     to: email,
     subject: 'Confirma tu cuenta',
     html: `<h2>Verifica tu cuenta</h2>
@@ -29,14 +29,14 @@ export const enviarCorreoReset = async (email: string, token: string) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'multiuno51@gmail.com',
-      pass: 'nzgy odob leuu uubv'
+      user: process.env.USER,
+      pass: process.env.PASS
     }
   });
 
   const url = `http://localhost:4200/usuarios/resetear-contrasenia/${token}`;
   const mailOptions = {
-    from: 'multiuno51@gmail.com',
+    from: process.env.USER,
     to: email,
     subject: 'Restablece tu contraseña',
     html: `<p>Hacé clic en el siguiente enlace para restablecer tu contraseña:</p><a href="${url}">${url}</a>`

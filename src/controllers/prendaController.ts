@@ -28,9 +28,6 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
 
 
 
-
-
-
 export const actualizarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
   await Prenda.update(req.body, { where: { id } });
@@ -42,6 +39,7 @@ export const eliminarPrenda = async (req: Request, res: Response) => {
   await Prenda.destroy({ where: { id } });
   res.sendStatus(204);
 };
+
 
 export const obtenerPrenda = async (req: Request, res: Response) => {
   try {
