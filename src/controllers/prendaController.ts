@@ -27,6 +27,7 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
 
 
 
+
 export const actualizarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
   await Prenda.update(req.body, { where: { id } });
