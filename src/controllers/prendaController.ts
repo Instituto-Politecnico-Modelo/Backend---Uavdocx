@@ -3,20 +3,12 @@ import { Prenda } from '../models/prendas';
 
 export const crearPrenda = async (req: Request, res: Response) => {
   try {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    const {nombre, precio, talles, categoria } = req.body;
-    const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria });
-=======
-    const {nombre, precio, talles, categoria, imagen } = req.body;
-    const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
->>>>>>> debugger
-=======
+
 
     const {nombre, precio, talles, categoria, imagen } = req.body;
     const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
 
->>>>>>> modifUIUX
+
     res.status(201).json(nuevaPrenda);
   } catch (error) {
     res.status(500).json({ error: 'Error con crear la prenda'});
@@ -32,17 +24,7 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
   }
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
-
->>>>>>> debugger
-=======
-
-
-
->>>>>>> modifUIUX
 export const actualizarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
   await Prenda.update(req.body, { where: { id } });
@@ -54,12 +36,7 @@ export const eliminarPrenda = async (req: Request, res: Response) => {
   await Prenda.destroy({ where: { id } });
   res.sendStatus(204);
 };
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 
->>>>>>> modifUIUX
 
 export const obtenerPrenda = async (req: Request, res: Response) => {
   try {
@@ -75,8 +52,3 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al obtener la prenda' });
 };
 }
-<<<<<<< HEAD
->>>>>>> debugger
-=======
-
->>>>>>> modifUIUX
