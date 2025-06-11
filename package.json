@@ -1,13 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
-
   "main": "dist/Main.js",
   "scripts": {
     "dev": "ts-node-dev --respawn src/app.ts",
     "start:debug": "node --inspect -r ts-node/register src/app.ts",
     "start": "node dist/Main.js",
-
     "build": "tsc"
   },
   "keywords": [],
