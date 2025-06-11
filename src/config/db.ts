@@ -1,10 +1,7 @@
 import { Sequelize } from 'sequelize';
 
-<<<<<<< HEAD
-export const sequelize = new Sequelize('uavdocx', 'root', 'valen3008', {
-=======
 export const sequelize = new Sequelize('uavdocx', 'alumno', 'alumnoipm', {
->>>>>>> modifUIUX
+
   host: 'localhost',
   dialect: 'mysql',
 });
