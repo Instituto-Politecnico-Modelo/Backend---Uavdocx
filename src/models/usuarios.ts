@@ -26,21 +26,13 @@ export const Usuario = sequelize.define('Usuarios', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 
->>>>>>> modifUIUX
   admin:{
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   }
-<<<<<<< HEAD
->>>>>>> debugger
-=======
 
->>>>>>> modifUIUX
+
 }, {
   timestamps: true,  //depende de la db tambien
 });
