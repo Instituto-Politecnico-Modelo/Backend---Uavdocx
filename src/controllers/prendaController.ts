@@ -9,8 +9,6 @@ export const crearPrenda = async (req: Request, res: Response) => {
     const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
 
 
-    const {nombre, precio, talles, categoria, imagen } = req.body;
-    const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
 
     res.status(201).json(nuevaPrenda);
   } catch (error) {
