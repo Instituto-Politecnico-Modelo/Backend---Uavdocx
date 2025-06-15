@@ -11,7 +11,7 @@ router.delete('/:id', eliminarPrenda);
 router.get('/:id', obtenerPrendas)
 
 
-router.get('/:id', obtenerPrendas)
+
 router.get('/productos', obtenerPrendas)
 
 
