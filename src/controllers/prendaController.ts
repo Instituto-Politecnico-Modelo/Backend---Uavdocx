@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { Prenda } from '../models/prendas';
+import { Op } from 'sequelize';
+
 
 export const crearPrenda = async (req: Request, res: Response) => {
   try {
@@ -18,10 +20,23 @@ export const crearPrenda = async (req: Request, res: Response) => {
 
 export const obtenerPrendas = async (req: Request, res: Response) => {
   try {
-    const prendas = await Prenda.findAll();
-    res.status(200).json(prendas);
+    const page = parseInt(req.query.page as string);
+    const limit = parseInt(req.query.limit as string);
+
+    const offset = (page - 1) * limit;
+    const { rows: prendas, count: total } = await Prenda.findAndCountAll({
+      limit,
+      offset
+    });
+
+    res.status(200).json({
+      total,
+      page,
+      limit,
+      data: prendas
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Error con obtener las prendas'});
+    res.status(500).json({ error: 'Error al obtener las prendas' });
   }
 };
 
@@ -53,5 +68,28 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
     res.status(200).json(prenda);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener la prenda' });
+  }
 };
-}
+
+
+
+export const buscarPrendas = async (req: Request, res: Response) => {
+  try {
+    const texto = (req.query.texto as string)?.toLowerCase().trim();
+
+    const prendas = await Prenda.findAll({
+      where: texto
+        ? {
+            nombre: {
+              [Op.iLike]: `%${texto}%` 
+            }
+          }
+        : {}
+    });
+
+    res.json(prendas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: 'Error al buscar prendas' });
+  }
+};
