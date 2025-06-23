@@ -71,6 +71,16 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
   }
 };
 
+  export const cargarPrendas = async (req: Request, res: Response) => {
+  try {
+    const prendas = await Prenda.findAll(); 
+    res.status(200).json(prendas);
+  } catch (error) {
+    console.error("Error al listar prendas:", error);
+    res.status(500).json({ error: 'Error al obtener las prendas' });
+  }
+};
+
 
 
 export const buscarPrendas = async (req: Request, res: Response) => {
