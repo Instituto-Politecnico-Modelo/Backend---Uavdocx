@@ -83,23 +83,27 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
 
 
 
-export const buscarPrendas = async (req: Request, res: Response) => {
-  try {
-    const texto = (req.query.texto as string)?.toLowerCase().trim();
+export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
+  const { nombre, page = '1', limit = '10' } = req.query;
 
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  try {
     const prendas = await Prenda.findAll({
-      where: texto
-        ? {
-            nombre: {
-              [Op.iLike]: `%${texto}%` 
-            }
-          }
-        : {}
+      where: nombre
+        ? { nombre: { [Op.like]: `%${nombre}%`
+ } }
+        : {},
+      limit: limitNumber,
+      offset: offset
     });
 
     res.json(prendas);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: 'Error al buscar prendas' });
-  }
+  } catch (error: any) {
+  console.error('Error en buscarPrendasPorNombre:', error.message);
+  res.status(500).json({ error: error.message });
+}
+
 };
