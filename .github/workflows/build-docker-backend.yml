@@ -1,4 +1,4 @@
-name: Build Backend Docker Image on PR
+name: Construir imagen Docker 
 
 on:
   pull_request:
@@ -11,34 +11,34 @@ permissions:
   packages: write
 
 jobs:
-  build-backend-image:
+  construir-imagen-backend:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Descargar repositorio
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
+      - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: List files in repo
+      - name: Listar archivos del repositorio
         run: ls -la
 
-      - name: Ensure Dockerfile exists
+      - name: Verificar que exista el Dockerfile
         run: test -f Dockerfile
 
-      - name: Logout from Docker (if logged in previously)
+      - name: Cerrar sesión en Docker (sino hay error)
         run: docker logout
 
-      - name: Log in to GitHub Container Registry
+      - name: Iniciar sesión en GitHub Container Registry
         uses: docker/login-action@v2
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
 
-      - name: Build Docker image (backend)
-        run: docker build --no-cache --progress=plain -t ghcr.io/valenh5/frontend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }} .
+      - name: Construir imagen Docker del backend
+        run: docker build --no-cache --progress=plain -t ghcr.io/valenh5/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }} .
 
-      - name: Push Docker image to GHCR
+      - name: Subir imagen Docker a GHCR
         run: docker push ghcr.io/valenh5/frontend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }}
