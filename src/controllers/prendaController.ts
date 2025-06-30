@@ -84,21 +84,17 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
 
 
 export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
-  const { nombre, page = '1', limit = '10' } = req.query;
+  const { nombre} = req.query;
 
-  const pageNumber = parseInt(page as string) || 1;
-  const limitNumber = parseInt(limit as string) || 10;
-  const offset = (pageNumber - 1) * limitNumber;
+
 
   try {
     const prendas = await Prenda.findAll({
-      where: nombre
-        ? { nombre: { [Op.like]: `%${nombre}%`
- } }
-        : {},
-      limit: limitNumber,
-      offset: offset
-    });
+  where: nombre
+    ? { nombre: { [Op.like]: `%${nombre}%` } }
+    : {}
+});
+
 
     res.json(prendas);
   } catch (error: any) {
