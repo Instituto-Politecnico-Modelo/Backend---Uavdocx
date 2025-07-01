@@ -6,11 +6,10 @@ import { Usuario } from '../models/usuarios';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
-import { enviarCorreoVerificacion } from '../utils/email'; 
-import { enviarCorreoReset } from '../utils/email'; 
+import { enviarCorreoVerificacion, enviarCorreoReset } from '../utils/email'; 
+import { sequelize } from '../config/db'; 
 
 const SECRET_KEY: string = process.env.CLAVE || '';
-
 
 export const registrarUsuario = async (req: Request, res: Response): Promise<void> => {
   const { usuario, email, contrasenia } = req.body;
@@ -25,9 +24,11 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
     return;
   }
 
+  const t = await sequelize.transaction();
   try {
-    const usuarioExistente = await Usuario.findOne({ where: { usuario } });
+    const usuarioExistente = await Usuario.findOne({ where: { usuario }, transaction: t, lock: t.LOCK.UPDATE });
     if (usuarioExistente) {
+      await t.rollback();
       res.status(409).json({ mensaje: 'El usuario ya existe' });
       return;
     }
@@ -40,7 +41,7 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
       email,
       contrasenia: hashedPassword,
       verificado: false, 
-    });
+    }, { transaction: t });
 
     const tokenVerificacion = jwt.sign(
       { email },
@@ -50,8 +51,10 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
 
     await enviarCorreoVerificacion(email, tokenVerificacion);
 
+    await t.commit();
     res.status(201).json({ mensaje: 'Usuario registrado. Revisa tu correo para confirmar tu cuenta.' });
   } catch (error: any) {
+    await t.rollback();
     console.error('Error en registrarUsuario:', error);
     res.status(500).json({
       mensaje: 'Error al registrar usuario',
@@ -99,20 +102,24 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
 export const verificarUsuario = async (req: Request, res: Response): Promise<void> => {
   const { token } = req.params;
 
+  const t = await sequelize.transaction();
   try {
     const payload = jwt.verify(token, SECRET_KEY) as { email: string };
 
-    const usuario = await Usuario.findOne({ where: { email: payload.email } });
+    const usuario = await Usuario.findOne({ where: { email: payload.email }, transaction: t, lock: t.LOCK.UPDATE });
 
     if (!usuario) {
+      await t.rollback();
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
       return;
     }
 
-    await usuario.update({ verificado: true });
+    await usuario.update({ verificado: true }, { transaction: t });
+    await t.commit();
 
     res.status(200).json({ mensaje: 'Cuenta verificada con éxito, puede volver a la pagina' });
   } catch (error: any) {
+    await t.rollback();
     console.error('Error para verificar usuario:', error);
     res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message || error });
   }
@@ -153,20 +160,24 @@ export const resetearContrasenia = async (req: Request, res: Response): Promise<
     return;
   }
 
+  const t = await sequelize.transaction();
   try {
     const { email } = jwt.verify(token, SECRET_KEY) as { email: string };
 
-    const usuario = await Usuario.findOne({ where: { email } });
+    const usuario = await Usuario.findOne({ where: { email }, transaction: t, lock: t.LOCK.UPDATE });
     if (!usuario) {
+      await t.rollback();
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
       return;
     }
 
     const hashed = await bcrypt.hash(nuevaContrasenia, 10);
-    await usuario.update({ contrasenia: hashed });
+    await usuario.update({ contrasenia: hashed }, { transaction: t });
 
+    await t.commit();
     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente' });
   } catch (error: any) {
+    await t.rollback();
     console.error('Error en resetearContrasenia:', error);
     res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message });
   }
