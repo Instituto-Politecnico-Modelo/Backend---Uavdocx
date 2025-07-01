@@ -1,20 +1,18 @@
 import { Request, Response } from 'express';
 import { Prenda } from '../models/prendas';
+import { sequelize } from '../config/db';
 import { Op } from 'sequelize';
 
-
 export const crearPrenda = async (req: Request, res: Response) => {
+  const t = await sequelize.transaction();
   try {
-
-
-    const {nombre, precio, talles, categoria, imagen } = req.body;
-    const nuevaPrenda = await Prenda.create({nombre, precio, talles, categoria, imagen });
-
-
-
+    const { nombre, precio, talles, categoria, imagen } = req.body;
+    const nuevaPrenda = await Prenda.create({ nombre, precio, talles, categoria, imagen }, { transaction: t });
+    await t.commit();
     res.status(201).json(nuevaPrenda);
   } catch (error) {
-    res.status(500).json({ error: 'Error con crear la prenda'});
+    await t.rollback();
+    res.status(500).json({ error: 'Error con crear la prenda' });
   }
 };
 
@@ -40,21 +38,31 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
   }
 };
 
-
-
-
 export const actualizarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await Prenda.update(req.body, { where: { id } });
-  res.sendStatus(204);
+  const t = await sequelize.transaction();
+  try {
+    await Prenda.update(req.body, { where: { id }, transaction: t });
+    await t.commit();
+    res.sendStatus(204);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: 'Error al actualizar la prenda' });
+  }
 };
 
 export const eliminarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await Prenda.destroy({ where: { id } });
-  res.sendStatus(204);
+  const t = await sequelize.transaction();
+  try {
+    await Prenda.destroy({ where: { id }, transaction: t });
+    await t.commit();
+    res.sendStatus(204);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: 'Error al eliminar la prenda' });
+  }
 };
-
 
 export const obtenerPrenda = async (req: Request, res: Response) => {
   try {
@@ -71,7 +79,7 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
   }
 };
 
-  export const cargarPrendas = async (req: Request, res: Response) => {
+export const cargarPrendas = async (req: Request, res: Response) => {
   try {
     const prendas = await Prenda.findAll(); 
     res.status(200).json(prendas);
@@ -81,25 +89,17 @@ export const obtenerPrenda = async (req: Request, res: Response) => {
   }
 };
 
-
-
 export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
-  const { nombre} = req.query;
-
-
-
+  const { nombre } = req.query;
   try {
     const prendas = await Prenda.findAll({
-  where: nombre
-    ? { nombre: { [Op.like]: `%${nombre}%` } }
-    : {}
-});
-
-
+      where: nombre
+        ? { nombre: { [Op.like]: `%${nombre}%` } }
+        : {}
+    });
     res.json(prendas);
   } catch (error: any) {
-  console.error('Error en buscarPrendasPorNombre:', error.message);
-  res.status(500).json({ error: error.message });
-}
-
+    console.error('Error en buscarPrendasPorNombre:', error.message);
+    res.status(500).json({ error: error.message });
+  }
 };
