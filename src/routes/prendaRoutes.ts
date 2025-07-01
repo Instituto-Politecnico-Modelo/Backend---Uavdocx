@@ -3,11 +3,13 @@ import { crearPrenda, obtenerPrendas, actualizarPrenda, eliminarPrenda, cargarPr
 
 const router = Router();
 
-router.post('/crearPrenda', crearPrenda);
+import { authenticateToken } from '../middleware/usuarios';
+
+router.post('/crearPrenda', authenticateToken, crearPrenda);
 router.get('/buscarPrendas', buscarPrendasPorNombre);
 router.get('/listarPrendas', obtenerPrendas);
-router.put('/:id', actualizarPrenda);
-router.delete('/:id', eliminarPrenda);
+router.put('/:id', authenticateToken, actualizarPrenda);
+router.delete('/:id', authenticateToken,  eliminarPrenda);
 router.get('/cargarPrendas',cargarPrendas);
 router.get('/:id', obtenerPrendas);
 
