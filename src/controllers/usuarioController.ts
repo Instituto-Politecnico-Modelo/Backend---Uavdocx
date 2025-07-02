@@ -84,7 +84,7 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
 
     if (passBien) {
       const token = jwt.sign(
-        { usuario: usuario_ingreso },
+        { id: usuario.getDataValue('id'), usuario: usuario_ingreso },
         SECRET_KEY,
         { expiresIn: '1h' }
       );
