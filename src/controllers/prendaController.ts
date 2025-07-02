@@ -2,8 +2,26 @@ import { Request, Response } from 'express';
 import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
 import { Op } from 'sequelize';
+import { Usuario } from '../models/usuarios'; 
 
-export const crearPrenda = async (req: Request, res: Response) => {
+export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
+  const usuario = await Usuario.findByPk(usuarioId);
+  if (!usuario) return false;
+
+  const { verificado, admin } = usuario.get();
+  return verificado === true && admin === true;
+}
+
+
+export const crearPrenda = async (req: Request, res: Response): Promise<void> => {
+  const usuarioId = (req as any).user?.id;
+
+  const autorizado = await verificarPermisosAdministrador(usuarioId);
+  if (!autorizado) {
+    res.status(403).json({ error: 'No tenes los permisos para realizar esta acción.' });
+    return;
+  }
+
   const t = await sequelize.transaction();
   try {
     const { nombre, precio, talles, categoria, imagen } = req.body;
@@ -12,33 +30,23 @@ export const crearPrenda = async (req: Request, res: Response) => {
     res.status(201).json(nuevaPrenda);
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error con crear la prenda' });
+    res.status(500).json({ error: 'Error al crear la prenda' });
   }
 };
 
-export const obtenerPrendas = async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string);
-    const limit = parseInt(req.query.limit as string);
 
-    const offset = (page - 1) * limit;
-    const { rows: prendas, count: total } = await Prenda.findAndCountAll({
-      limit,
-      offset
-    });
 
-    res.status(200).json({
-      total,
-      page,
-      limit,
-      data: prendas
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener las prendas' });
+
+
+export const actualizarPrenda = async (req: Request, res: Response): Promise<void> => {
+  const usuarioId = (req as any).user?.id;
+
+  const autorizado = await verificarPermisosAdministrador(usuarioId);
+  if (!autorizado) {
+    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
+    return;
   }
-};
 
-export const actualizarPrenda = async (req: Request, res: Response) => {
   const { id } = req.params;
   const t = await sequelize.transaction();
   try {
@@ -51,7 +59,17 @@ export const actualizarPrenda = async (req: Request, res: Response) => {
   }
 };
 
-export const eliminarPrenda = async (req: Request, res: Response) => {
+
+
+export const eliminarPrenda = async (req: Request, res: Response): Promise<void> => {
+  const usuarioId = (req as any).user?.id;
+
+  const autorizado = await verificarPermisosAdministrador(usuarioId);
+  if (!autorizado) {
+    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
+    return;
+  }
+
   const { id } = req.params;
   const t = await sequelize.transaction();
   try {
@@ -63,6 +81,8 @@ export const eliminarPrenda = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al eliminar la prenda' });
   }
 };
+
+
 
 export const obtenerPrenda = async (req: Request, res: Response) => {
   try {
@@ -101,5 +121,27 @@ export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error en buscarPrendasPorNombre:', error.message);
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const obtenerPrendas = async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string);
+    const limit = parseInt(req.query.limit as string);
+
+    const offset = (page - 1) * limit;
+    const { rows: prendas, count: total } = await Prenda.findAndCountAll({
+      limit,
+      offset
+    });
+
+    res.status(200).json({
+      total,
+      page,
+      limit,
+      data: prendas
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener las prendas' });
   }
 };
