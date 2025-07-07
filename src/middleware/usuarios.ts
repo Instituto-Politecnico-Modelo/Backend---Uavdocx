@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 const SECRET_KEY: string = process.env.CLAVE || '';
 
-export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+export function verificarToken(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 

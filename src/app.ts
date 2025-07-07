@@ -4,7 +4,7 @@ import bodyParser from 'body-parser';
 import { sequelize } from './config/db';
 import usuariosRoutes from './routes/usuariosRoutes';
 import prendaRoutes from './routes/prendaRoutes';  
-import { authenticateToken } from './middleware/usuarios';
+import { verificarToken } from './middleware/usuarios';
 
 const app = express();
 const PORT = process.env.PORT;
@@ -16,7 +16,7 @@ app.use('/usuarios', usuariosRoutes);
 
 app.use('/prendas', prendaRoutes);
 
-app.get('/perfil', authenticateToken, (req, res) => {
+app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
