@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { crearPrenda, obtenerPrendas, actualizarPrenda, eliminarPrenda, cargarPrendas, buscarPrendasPorNombre } from '../controllers/prendaController';
+import { filtrarPrendas ,crearPrenda, obtenerPrendas, actualizarPrenda, eliminarPrenda, cargarPrendas, buscarPrendasPorNombre } from '../controllers/prendaController';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.get('/cargarPrendas',cargarPrendas);
 router.get('/:id', obtenerPrendas);
 
 
-
+router.post('/filtrar', filtrarPrendas)
 router.get('/productos', obtenerPrendas)
 
 
