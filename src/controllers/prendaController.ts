@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
-import { Op } from 'sequelize';
+import { literal, Op } from 'sequelize';
 import { Usuario } from '../models/usuarios'; 
 
 export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
@@ -131,7 +131,7 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
 
     const offset = (page - 1) * limit;
     const { rows: prendas, count: total } = await Prenda.findAndCountAll({
-      limit,
+      limit, 
       offset
     });
 
@@ -143,5 +143,46 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener las prendas' });
+  }
+};
+
+export const filtrarPrendas = async (req: Request, res: Response) => {//talles todavia no
+  try {
+    const { minimo, maximo, categoria, talles } = req.body;
+    const whereClause: any = {};
+
+    if (minimo !== undefined && maximo !== undefined) {
+      whereClause.precio = { [Op.between]: [minimo, maximo] };
+    } else if (minimo !== undefined) {
+      whereClause.precio = { [Op.gte]: minimo };
+    } else if (maximo !== undefined) {
+      whereClause.precio = { [Op.lte]: maximo };
+    }
+
+    if (categoria) {
+      whereClause.categoria = categoria;
+    }
+
+    const tallesConditions: any[] = [];
+    if (talles && typeof talles === 'object') {
+      for (const [talle, cantidad] of Object.entries(talles)) {
+        tallesConditions.push(
+          literal(`("talles"->>'${talle}')::int >= ${cantidad}`)
+        );
+
+      }
+    }
+
+    const prendas = await Prenda.findAll({
+      where: {
+        ...whereClause,
+        ...(tallesConditions.length > 0 ? { [Op.and]: tallesConditions } : {})
+      }
+    });
+
+    res.status(200).json(prendas);
+  } catch (error) {
+    console.error('Error en filtrarPrendas:', error);
+    res.status(500).json({ error: 'Error al filtrar las prendas' });
   }
 };
