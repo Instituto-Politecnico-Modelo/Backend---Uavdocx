@@ -3,6 +3,7 @@ import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
 import { literal, Op } from 'sequelize';
 import { Usuario } from '../models/usuarios'; 
+import { Carrito } from '../models/carrito'; 
 
 export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
   const usuario = await Usuario.findByPk(usuarioId);
@@ -10,6 +11,14 @@ export async function verificarPermisosAdministrador(usuarioId: number): Promise
 
   const { verificado, admin } = usuario.get();
   return verificado === true && admin === true;
+}
+
+export async function verificarVerificado(usuarioId: number): Promise<boolean> {
+  const usuario = await Usuario.findByPk(usuarioId);
+  if (!usuario) return false;
+
+  const { verificado } = usuario.get();
+  return verificado === true;
 }
 
 
