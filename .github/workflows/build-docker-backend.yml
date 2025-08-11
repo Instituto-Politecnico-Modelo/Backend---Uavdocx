@@ -41,7 +41,6 @@ jobs:
         run: docker info
 
       - name: Construir imagen Docker del backend
-        run: docker build --no-cache --progress=plain -t ghcr.io/valenh5/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }} .
-
+        run: docker build --no-cache --progress=plain -t ghcr.io/instituto-politecnico-modelo/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }} .
       - name: Subir imagen Docker a GHCR
-        run: docker push ghcr.io/valenh5/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }}
+        run: docker push ghcr.io/instituto-politecnico-modelo/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }}
