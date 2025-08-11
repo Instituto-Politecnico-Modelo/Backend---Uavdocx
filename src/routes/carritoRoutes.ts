@@ -8,7 +8,4 @@ router.post('/agregar', agregarAlCarrito);
 router.delete('/eliminar', eliminarProductoCarrito);
 router.get('', obtenerCarrito);
 
-
-
-
 export default router;
