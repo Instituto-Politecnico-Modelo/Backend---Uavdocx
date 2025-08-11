@@ -1,4 +1,4 @@
-name: Construir imagen Docker 
+name: Construir imagen Docker
 
 on:
   pull_request:
@@ -31,11 +31,14 @@ jobs:
         run: docker logout
 
       - name: Iniciar sesión en GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
+
+      - name: Verificar sesión en Docker
+        run: docker info
 
       - name: Construir imagen Docker del backend
         run: docker build --no-cache --progress=plain -t ghcr.io/valenh5/backend---uavdocx/backend-app:pr-${{ github.event.pull_request.number }} .
