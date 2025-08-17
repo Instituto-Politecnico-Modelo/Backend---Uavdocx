@@ -11,7 +11,7 @@ export const Carrito = sequelize.define('Carrito', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  precio: {
+  precioTotal: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0, 
