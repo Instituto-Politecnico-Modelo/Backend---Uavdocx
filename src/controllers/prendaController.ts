@@ -93,20 +93,7 @@ export const eliminarPrenda = async (req: Request, res: Response): Promise<void>
 
 
 
-export const obtenerPrenda = async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id; 
-    const prenda = await Prenda.findByPk(id);
 
-    if (!prenda) {
-      return res.status(404).json({ error: 'Prenda no encontrada' });
-    }
-
-    res.status(200).json(prenda);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener la prenda' });
-  }
-};
 
 export const cargarPrendas = async (req: Request, res: Response) => {
   try {
@@ -134,15 +121,21 @@ export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
 };
 
 export const obtenerPrendas = async (req: Request, res: Response) => {
+  console.log('obtenerPrendas: inicio');
   try {
+    console.log('obtenerPrendas: req.query', req.query);
     const page = parseInt(req.query.page as string);
     const limit = parseInt(req.query.limit as string);
+    console.log('obtenerPrendas: page', page, 'limit', limit);
 
     const offset = (page - 1) * limit;
+    console.log('obtenerPrendas: offset', offset);
     const { rows: prendas, count: total } = await Prenda.findAndCountAll({
       limit, 
       offset
     });
+    console.log('obtenerPrendas: prendas encontradas', prendas);
+    console.log('obtenerPrendas: total', total);
 
     res.status(200).json({
       total,
@@ -150,7 +143,9 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
       limit,
       data: prendas
     });
+    console.log('obtenerPrendas: respuesta enviada');
   } catch (error) {
+    console.error('obtenerPrendas: error', error);
     res.status(500).json({ error: 'Error al obtener las prendas' });
   }
 };
@@ -193,5 +188,22 @@ export const filtrarPrendas = async (req: Request, res: Response) => {//talles t
   } catch (error) {
     console.error('Error en filtrarPrendas:', error);
     res.status(500).json({ error: 'Error al filtrar las prendas' });
+  }
+};
+
+
+export const getPrendaPorId = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const prenda = await Prenda.findByPk(id);
+    if (!prenda) {
+      res.status(404).json({ error: 'Prenda no encontrada' });
+      return;
+    }
+  res.status(200).json(prenda);
+  return;
+  } catch (error) {
+  res.status(500).json({ error: 'Error al obtener la prenda' });
+  return;
   }
 };
