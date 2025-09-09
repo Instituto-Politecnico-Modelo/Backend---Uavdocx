@@ -93,20 +93,7 @@ export const eliminarPrenda = async (req: Request, res: Response): Promise<void>
 
 
 
-export const obtenerPrenda = async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id; 
-    const prenda = await Prenda.findByPk(id);
 
-    if (!prenda) {
-      return res.status(404).json({ error: 'Prenda no encontrada' });
-    }
-
-    res.status(200).json(prenda);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener la prenda' });
-  }
-};
 
 export const cargarPrendas = async (req: Request, res: Response) => {
   try {
@@ -193,5 +180,22 @@ export const filtrarPrendas = async (req: Request, res: Response) => {//talles t
   } catch (error) {
     console.error('Error en filtrarPrendas:', error);
     res.status(500).json({ error: 'Error al filtrar las prendas' });
+  }
+};
+
+
+export const getPrendaPorId = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const prenda = await Prenda.findByPk(id);
+    if (!prenda) {
+      res.status(404).json({ error: 'Prenda no encontrada' });
+      return;
+    }
+  res.status(200).json(prenda);
+  return;
+  } catch (error) {
+  res.status(500).json({ error: 'Error al obtener la prenda' });
+  return;
   }
 };
