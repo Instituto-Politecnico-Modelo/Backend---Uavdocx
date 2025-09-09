@@ -121,15 +121,21 @@ export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
 };
 
 export const obtenerPrendas = async (req: Request, res: Response) => {
+  console.log('obtenerPrendas: inicio');
   try {
+    console.log('obtenerPrendas: req.query', req.query);
     const page = parseInt(req.query.page as string);
     const limit = parseInt(req.query.limit as string);
+    console.log('obtenerPrendas: page', page, 'limit', limit);
 
     const offset = (page - 1) * limit;
+    console.log('obtenerPrendas: offset', offset);
     const { rows: prendas, count: total } = await Prenda.findAndCountAll({
       limit, 
       offset
     });
+    console.log('obtenerPrendas: prendas encontradas', prendas);
+    console.log('obtenerPrendas: total', total);
 
     res.status(200).json({
       total,
@@ -137,7 +143,9 @@ export const obtenerPrendas = async (req: Request, res: Response) => {
       limit,
       data: prendas
     });
+    console.log('obtenerPrendas: respuesta enviada');
   } catch (error) {
+    console.error('obtenerPrendas: error', error);
     res.status(500).json({ error: 'Error al obtener las prendas' });
   }
 };

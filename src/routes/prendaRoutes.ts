@@ -11,7 +11,6 @@ router.get('/listarPrendas', obtenerPrendas);
 router.put('/:id', verificarToken, actualizarPrenda);
 router.delete('/:id', verificarToken,  eliminarPrenda);
 router.get('/cargarPrendas',cargarPrendas);
-router.get('', obtenerPrendas);
 
 router.get('/:id', getPrendaPorId);
 
