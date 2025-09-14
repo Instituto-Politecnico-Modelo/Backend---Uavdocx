@@ -33,3 +33,39 @@ sequelize.sync({ alter: true })
     });
   })
   .catch(err => console.error('Error al sincronizar la base de datos:', err));
+
+
+  import { MercadoPagoConfig, Preference } from 'mercadopago';
+  const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
+  
+app.post('/create-preference',  (req, res) => {
+  const preference = new Preference(client);
+
+  preference.create({
+    body: {
+      items: [
+        {
+          title: 'Mi producto',
+          quantity: 1,
+          unit_price: 2000,
+          id: ''
+        }
+      ],
+    }
+  })
+  .then((data) => {
+    res.status(200).json({
+      preference_id: data.id,
+      preference_url: data.init_point,
+
+    });
+  })
+  .catch(() => {
+    res.status(500).json({
+      error: 'Error al crear la preferencia'
+    });
+
+  });
+});
+    
+    
