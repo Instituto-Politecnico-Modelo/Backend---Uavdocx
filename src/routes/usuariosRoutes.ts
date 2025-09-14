@@ -4,7 +4,8 @@ import {
     registrarUsuario,
     verificarUsuario,
     solicitarResetContrasenia,
-    resetearContrasenia
+    resetearContrasenia,
+    verificarPermisosAdministrador
 } 
 from '../controllers/usuarioController';
 
@@ -15,5 +16,6 @@ router.post('/ingresar', comprobarUsuario);
 router.get('/verificar/:token', verificarUsuario);
 router.post('/olvide-contrasenia', solicitarResetContrasenia);
 router.post('/resetear-contrasenia/:token', resetearContrasenia);
+router.get('/admin/:id', verificarPermisosAdministrador);
 
 export default router;

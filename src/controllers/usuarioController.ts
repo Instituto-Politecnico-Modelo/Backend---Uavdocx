@@ -83,13 +83,14 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
     const passBien = await bcrypt.compare(pass_ingreso, hashBD);
 
     if (passBien) {
+      const id = usuario.getDataValue('id');
       const token = jwt.sign(
-        { id: usuario.getDataValue('id'), usuario: usuario_ingreso },
+        { id, usuario: usuario_ingreso },
         SECRET_KEY,
         { expiresIn: '1h' }
       );
 
-      res.status(200).json({ mensaje: 'Login correcto', token });
+      res.status(200).json({ mensaje: 'Login correcto', token, id });
     } else {
       res.status(401).json({ mensaje: 'La contraseña es incorrecta' });
     }
@@ -122,6 +123,28 @@ export const verificarUsuario = async (req: Request, res: Response): Promise<voi
     await t.rollback();
     console.error('Error para verificar usuario:', error);
     res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message || error });
+  }
+};
+
+
+
+export const verificarPermisosAdministrador = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado' });
+      return;
+    }
+    const { admin } = usuario.get();
+    if (admin === true) {
+      res.status(200).json({ esAdmin: true });
+    } else {
+      res.status(403).json({ esAdmin: false, mensaje: 'No tiene permisos de administrador' });
+    }
+  } catch (error) {
+    console.error('Error al verificar permisos de administrador:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
   }
 };
 
