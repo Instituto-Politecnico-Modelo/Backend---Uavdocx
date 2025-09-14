@@ -45,9 +45,9 @@ app.post('/create-preference',  (req, res) => {
     body: {
       items: [
         {
-          title: 'Mi producto',
+          title: 'Lucio',
           quantity: 1,
-          unit_price: 2000,
+          unit_price: 1,
           id: ''
         }
       ],
