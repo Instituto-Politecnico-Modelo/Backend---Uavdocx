@@ -6,11 +6,14 @@ import usuariosRoutes from './routes/usuariosRoutes';
 import prendaRoutes from './routes/prendaRoutes';  
 import carritoRoutes from './routes/carritoRoutes';  
 import { verificarToken } from './middleware/usuarios';
+import reclamoRoutes from './routes/reclamoRoutes';
 
 const app = express();
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(bodyParser.json());
+
+app.use('/reclamos', reclamoRoutes);
 
 app.use('/usuarios', usuariosRoutes);
 
