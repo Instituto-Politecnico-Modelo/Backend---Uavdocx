@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post('/', crearReclamo); 
+router.post('/crearReclamo', crearReclamo); 
 router.get('/', obtenerReclamos);
 router.get('/:id', obtenerReclamoPorId);
 router.put('/:id', modificarReclamo);
