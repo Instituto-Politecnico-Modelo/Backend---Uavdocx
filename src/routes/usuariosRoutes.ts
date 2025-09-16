@@ -9,6 +9,7 @@ import {
 } 
 from '../controllers/usuarioController';
 
+
 const router = express.Router();
 
 router.post('/registro', registrarUsuario);
