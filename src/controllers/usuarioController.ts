@@ -56,7 +56,7 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
     const tokenVerificacion = jwt.sign(
       { email },
       SECRET_KEY,
-      { expiresIn: '1h' }
+      { expiresIn: '8h' }
     );
 
     await enviarCorreoVerificacion(email, tokenVerificacion);
@@ -97,7 +97,7 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
       const token = jwt.sign(
         { id, usuario: usuario_ingreso },
         SECRET_KEY,
-        { expiresIn: '1h' }
+        { expiresIn: '8h' }
       );
 
       res.status(200).json({ mensaje: 'Login correcto', token, id });

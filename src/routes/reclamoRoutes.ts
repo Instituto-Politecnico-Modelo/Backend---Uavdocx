@@ -4,7 +4,8 @@ import {
     obtenerReclamos,
     obtenerReclamoPorId,
     modificarReclamo,
-    eliminarReclamo
+    eliminarReclamo,
+    obtenerReclamosPorUsuario
 } from '../controllers/reclamoController';
 
 import { verificarToken } from '../middleware/usuarios';
@@ -18,5 +19,6 @@ router.get('/', verificarToken, obtenerReclamos);
 router.get('/:id', verificarToken, obtenerReclamoPorId);
 router.put('/:id', verificarToken, modificarReclamo);
 router.delete('/:id', verificarToken, eliminarReclamo);
+router.get('/reclamosUsuario/:idUsuario', verificarToken, obtenerReclamosPorUsuario);
 
 export default router;
