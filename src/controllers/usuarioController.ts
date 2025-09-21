@@ -9,6 +9,16 @@ import validator from 'validator';
 import { enviarCorreoVerificacion, enviarCorreoReset } from '../utils/email'; 
 import { sequelize } from '../config/db'; 
 
+export const obtenerTodosUsuarios = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const usuarios = await Usuario.findAll();
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ mensaje: 'Error al obtener usuarios', error });
+  }
+};
+
 const SECRET_KEY: string = process.env.CLAVE || '';
 
 export const registrarUsuario = async (req: Request, res: Response): Promise<void> => {
@@ -46,7 +56,7 @@ export const registrarUsuario = async (req: Request, res: Response): Promise<voi
     const tokenVerificacion = jwt.sign(
       { email },
       SECRET_KEY,
-      { expiresIn: '1h' }
+      { expiresIn: '8h' }
     );
 
     await enviarCorreoVerificacion(email, tokenVerificacion);
@@ -87,7 +97,7 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
       const token = jwt.sign(
         { id, usuario: usuario_ingreso },
         SECRET_KEY,
-        { expiresIn: '1h' }
+        { expiresIn: '8h' }
       );
 
       res.status(200).json({ mensaje: 'Login correcto', token, id });

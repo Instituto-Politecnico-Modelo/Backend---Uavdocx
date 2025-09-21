@@ -78,3 +78,15 @@ export const eliminarReclamo: RequestHandler = async (req, res) => {
 		return;
 	}
 };
+
+export const obtenerReclamosPorUsuario: RequestHandler = async (req, res) => {
+	try {
+		const { idUsuario } = req.params;
+		const reclamos = await Reclamo.findAll({ where: { idUsuario } });
+		res.json(reclamos);
+		return;
+	} catch (error: any) {
+		res.status(500).json({ error: 'Error al obtener los reclamos del usuario', details: error.message });
+		return;
+	}	
+};
