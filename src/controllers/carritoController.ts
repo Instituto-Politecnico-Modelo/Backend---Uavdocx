@@ -5,6 +5,7 @@ import { Carrito } from '../models/carrito';
 import { Prenda } from '../models/prendas'; 
 
 
+
 export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
   const usuario = await Usuario.findByPk(usuarioId);
   if (!usuario) return false;
@@ -21,7 +22,7 @@ export async function verificarVerificado(usuarioId: number): Promise<boolean> {
   return verificado === true;
 }
 
-type ProductoCarrito = { id: number; cantidad: number; precio: number };
+type ProductoCarrito = { id: number; cantidad: number; precio: number; talle: string };
 
 export const agregarAlCarrito = async (req: Request, res: Response): Promise<void> => {
   const usuarioId = (req as any).user?.id;
@@ -31,7 +32,7 @@ export const agregarAlCarrito = async (req: Request, res: Response): Promise<voi
     return;
   }
 
-  const { productos } = req.body; 
+  const { productos } = req.body;
   const t = await sequelize.transaction();
   try {
     let carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
@@ -46,14 +47,16 @@ export const agregarAlCarrito = async (req: Request, res: Response): Promise<voi
       const prenda = await Prenda.findByPk(prod.id);
       if (prenda) {
         const precio = prenda.get('precio') as number;
-        if (nuevosProductos[prod.id]) {
-          nuevosProductos[prod.id].cantidad += prod.cantidad;
-          nuevosProductos[prod.id].precio = precio; 
+        const clave = `${prod.id}-${prod.talle}`;
+        if (nuevosProductos[clave]) {
+          nuevosProductos[clave].cantidad += prod.cantidad;
+          nuevosProductos[clave].precio = precio;
         } else {
-          nuevosProductos[prod.id] = { id: prod.id, cantidad: prod.cantidad, precio };
+          nuevosProductos[clave] = { id: prod.id, cantidad: prod.cantidad, precio, talle: prod.talle };
         }
       }
     }
+
 
     let precioTotal = 0;
     for (const key in nuevosProductos) {
@@ -95,14 +98,17 @@ export const obtenerCarrito = async (req: Request, res: Response): Promise<void>
     }
 
     const productos = (carrito.get('productos') as { [key: string]: ProductoCarrito }) || {};
-    const productosArray: ProductoCarrito[] = Object.values(productos);
+    const productosArray = Object.entries(productos).map(([key, value]) => ({
+      ...value,
+      clave: key
+    }));
     const precioTotal = carrito.get('precioTotal') as number || 0;
 
     res.status(200).json({ productos: productosArray, precioTotal });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener el carrito' });
   }
-}
+};
 
 
 export const eliminarProductoCarrito = async (req: Request, res: Response): Promise<void> => {
@@ -112,119 +118,130 @@ export const eliminarProductoCarrito = async (req: Request, res: Response): Prom
     res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
     return;
   }
-  const { productoId } = req.body;
+
+  const { productoId, talle } = req.body;
+  const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
     if (!carrito) {
-      res.status(404).json({ error: 'Carrito no encontrado' });
+      res.status(404).json({ error: 'Carrito no encontrado.' });
+      await t.rollback();
       return;
     }
-    const productos = (carrito.get('productos') || {}) as { [key: string]: ProductoCarrito };
-    if (productos[productoId]) {
-      delete productos[productoId];
-
+    const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
+    if (productos[clave]) {
+      delete productos[clave];
+      // Recalcular precio total
       let precioTotal = 0;
       for (const key in productos) {
-        const producto = productos[key];
-        const prendaId = Number(key);
-        const prenda = await Prenda.findByPk(prendaId);
-        if (prenda && producto.cantidad) {
-          const precio = prenda.get('precio') as number;
-          precioTotal += precio * producto.cantidad;
-          producto.precio = precio;
-        }
+        const prod = productos[key];
+        precioTotal += prod.precio * prod.cantidad;
       }
-
+      carrito.set('productos', productos);
       carrito.set('precioTotal', precioTotal);
-      carrito.set('productos', JSON.parse(JSON.stringify(productos)));
+      carrito.changed('productos' as any, true);
+      carrito.changed('precioTotal' as any, true);
       await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
       await t.commit();
-      res.status(200).json({ message: 'Producto eliminado del carrito y de la base de datos', carrito });
+      res.status(200).json({ message: 'Producto eliminado del carrito.' });
     } else {
       await t.rollback();
-      res.status(404).json({ error: 'Producto no encontrado en el carrito' });
+      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
     }
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al eliminar el producto del carrito' });
+    res.status(500).json({ error: 'Error al eliminar producto del carrito.' });
   }
 };
 
-  export const sumarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
-    const usuarioId = (req as any).user?.id;
-    const autorizado = await verificarVerificado(usuarioId);
-    if (!autorizado) {
-      res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-      return;
-    }
-    const { productoId } = req.body;
-    const t = await sequelize.transaction();
-    try {
-      const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
-      if (!carrito) {
-        res.status(404).json({ error: 'Carrito no encontrado' });
-        return;
-      }
-      const productos = (carrito.get('productos') || {}) as { [key: string]: ProductoCarrito };
-      if (productos[productoId]) {
-        productos[productoId].cantidad += 1;
-        let precioTotal = 0;
-        for (const key in productos) {
-          const producto = productos[key];
-          precioTotal += producto.precio * producto.cantidad;
-        }
-        carrito.set('precioTotal', precioTotal);
-        carrito.set('productos', JSON.parse(JSON.stringify(productos)));
-        await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
-        await t.commit();
-        res.status(200).json({ message: 'Cantidad sumada', carrito });
-      } else {
-        await t.rollback();
-        res.status(404).json({ error: 'Producto no encontrado en el carrito' });
-      }
-    } catch (error) {
-      await t.rollback();
-      res.status(500).json({ error: 'Error al sumar cantidad' });
-    }
+export const sumarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
+  const usuarioId = (req as any).user?.id;
+  const autorizado = await verificarVerificado(usuarioId);
+  if (!autorizado) {
+    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
+    return;
   }
 
-  export const restarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
-    const usuarioId = (req as any).user?.id;
-    const autorizado = await verificarVerificado(usuarioId);
-    if (!autorizado) {
-      res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
+  const { productoId, talle } = req.body;
+  const clave = `${productoId}-${talle}`;
+  const t = await sequelize.transaction();
+  try {
+    const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
+    if (!carrito) {
+      res.status(404).json({ error: 'Carrito no encontrado.' });
+      await t.rollback();
       return;
     }
-    const { productoId } = req.body;
-    const t = await sequelize.transaction();
-    try {
-      const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
-      if (!carrito) {
-        res.status(404).json({ error: 'Carrito no encontrado' });
-        return;
+    const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
+    if (productos[clave]) {
+      productos[clave].cantidad += 1;
+      // Recalcular precio total
+      let precioTotal = 0;
+      for (const key in productos) {
+        const prod = productos[key];
+        precioTotal += prod.precio * prod.cantidad;
       }
-      const productos = (carrito.get('productos') || {}) as { [key: string]: ProductoCarrito };
-      if (productos[productoId]) {
-        if (productos[productoId].cantidad > 1) {
-          productos[productoId].cantidad -= 1;
-        }
-        let precioTotal = 0;
-        for (const key in productos) {
-          const producto = productos[key];
-          precioTotal += producto.precio * producto.cantidad;
-        }
-        carrito.set('precioTotal', precioTotal);
-        carrito.set('productos', JSON.parse(JSON.stringify(productos)));
-        await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
-        await t.commit();
-        res.status(200).json({ message: 'Cantidad restada', carrito });
-      } else {
-        await t.rollback();
-        res.status(404).json({ error: 'Producto no encontrado en el carrito' });
-      }
-    } catch (error) {
+      carrito.set('productos', productos);
+      carrito.set('precioTotal', precioTotal);
+      carrito.changed('productos' as any, true);
+      carrito.changed('precioTotal' as any, true);
+      await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
+      await t.commit();
+      res.status(200).json({ message: 'Cantidad aumentada.' });
+    } else {
       await t.rollback();
-      res.status(500).json({ error: 'Error al restar cantidad' });
+      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
     }
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: 'Error al aumentar cantidad.' });
   }
+};
+
+export const restarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
+  const usuarioId = (req as any).user?.id;
+  const autorizado = await verificarVerificado(usuarioId);
+  if (!autorizado) {
+    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
+    return;
+  }
+
+  const { productoId, talle } = req.body;
+  const clave = `${productoId}-${talle}`;
+  const t = await sequelize.transaction();
+  try {
+    const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
+    if (!carrito) {
+      res.status(404).json({ error: 'Carrito no encontrado.' });
+      await t.rollback();
+      return;
+    }
+    const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
+    if (productos[clave]) {
+      productos[clave].cantidad -= 1;
+      if (productos[clave].cantidad <= 0) {
+        delete productos[clave];
+      }
+      // Recalcular precio total
+      let precioTotal = 0;
+      for (const key in productos) {
+        const prod = productos[key];
+        precioTotal += prod.precio * prod.cantidad;
+      }
+      carrito.set('productos', productos);
+      carrito.set('precioTotal', precioTotal);
+      carrito.changed('productos' as any, true);
+      carrito.changed('precioTotal' as any, true);
+      await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
+      await t.commit();
+      res.status(200).json({ message: 'Cantidad disminuida.' });
+    } else {
+      await t.rollback();
+      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
+    }
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: 'Error al disminuir cantidad.' });
+  }
+};

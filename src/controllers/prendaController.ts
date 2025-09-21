@@ -13,6 +13,25 @@ export async function verificarPermisosAdministrador(usuarioId: number): Promise
   return verificado === true && admin === true;
 }
 
+
+
+export async function talleDisponiblePorPrenda(id: number, talle: string, cantidad: number): Promise<{disponible: boolean, stockActual: number | null}> {
+  const prenda = await Prenda.findByPk(id);
+  if (!prenda) return { disponible: false, stockActual: null };
+  const talles = prenda.get('talles') as { [key: string]: number };
+  const stockActual = talles[talle] ?? null;
+  return { disponible: stockActual !== null && stockActual >= cantidad, stockActual };
+}
+export const talleDisponibleHandler = async (req: Request, res: Response) => {
+  const { id, talle, cantidad } = req.params;
+  try {
+    const result = await talleDisponiblePorPrenda(Number(id), talle, Number(cantidad));
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al verificar disponibilidad de talle' });
+  }
+};
+
 export async function verificarVerificado(usuarioId: number): Promise<boolean> {
   const usuario = await Usuario.findByPk(usuarioId);
   if (!usuario) return false;

@@ -4,16 +4,21 @@ import {
     obtenerReclamos,
     obtenerReclamoPorId,
     modificarReclamo,
-    eliminarReclamo
+    eliminarReclamo,
+    obtenerReclamosPorUsuario
 } from '../controllers/reclamoController';
+
+import { verificarToken } from '../middleware/usuarios';
+
 
 
 const router = express.Router();
 
-router.post('/crearReclamo', crearReclamo); 
-router.get('/', obtenerReclamos);
-router.get('/:id', obtenerReclamoPorId);
-router.put('/:id', modificarReclamo);
-router.delete('/:id', eliminarReclamo);
+router.post('/crearReclamo', verificarToken, crearReclamo); 
+router.get('/', verificarToken, obtenerReclamos);
+router.get('/:id', verificarToken, obtenerReclamoPorId);
+router.put('/:id', verificarToken, modificarReclamo);
+router.delete('/:id', verificarToken, eliminarReclamo);
+router.get('/reclamosUsuario/:idUsuario', verificarToken, obtenerReclamosPorUsuario);
 
 export default router;
