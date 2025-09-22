@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { Usuario } from '../models/usuarios';
 
 const SECRET_KEY: string = process.env.CLAVE || '';
 
@@ -20,4 +21,14 @@ export function verificarToken(req: Request, res: Response, next: NextFunction):
     (req as any).user = user;
     next();
   });
+}
+
+export async function soloAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const userData = (req as any).user;
+  const usuario = await Usuario.findByPk(userData.id);
+  if (!usuario || !usuario.get('admin')) {
+    res.status(403).json({ message: 'Solo administradores pueden realizar esta acción' });
+    return;
+  }
+  next();
 }
