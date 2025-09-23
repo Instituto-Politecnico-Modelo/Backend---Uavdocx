@@ -19,6 +19,8 @@ export const obtenerTodosUsuarios = async (req: Request, res: Response): Promise
   }
 };
 
+
+
 const SECRET_KEY: string = process.env.CLAVE || '';
 
 export const registrarUsuario = async (req: Request, res: Response): Promise<void> => {
@@ -214,4 +216,55 @@ export const resetearContrasenia = async (req: Request, res: Response): Promise<
     console.error('Error en resetearContrasenia:', error);
     res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message });
   }
-};
+  };
+
+  export const cambiarEstadoAdministrador = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+      const usuario = await Usuario.findByPk(id);
+      if (!usuario) {
+        res.status(404).json({ mensaje: 'Usuario no encontrado' });
+        return;
+      }
+      const esAdminActual = usuario.get('admin');
+      await usuario.update({ admin: !esAdminActual });
+      res.status(200).json({ mensaje: `Estado de administrador cambiado a ${!esAdminActual}` });
+    } catch (error) {
+      console.error('Error al cambiar estado de administrador:', error);
+      res.status(500).json({ mensaje: 'Error interno del servidor' });
+    }
+  };
+
+  export const cambiarEstadoVerificado = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+      const usuario = await Usuario.findByPk(id);
+      if (!usuario) {
+        res.status(404).json({ mensaje: 'Usuario no encontrado' });
+        return;
+      }
+      const esVerificadoActual = usuario.get('verificado');
+      await usuario.update({ verificado: !esVerificadoActual });
+      res.status(200).json({ mensaje: `Estado de verificado cambiado a ${!esVerificadoActual}` });
+    } catch (error) {
+      console.error('Error al cambiar estado de verificado:', error);
+      res.status(500).json({ mensaje: 'Error interno del servidor' });
+    }
+  };
+
+  export const eliminarUsuario = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+      const usuario = await Usuario.findByPk(id);
+      if (!usuario) {
+        res.status(404).json({ mensaje: 'Usuario no encontrado' });
+        return;
+      }
+
+      await usuario.destroy();
+      res.status(200).json({ mensaje: 'Usuario eliminado correctamente' });
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      res.status(500).json({ mensaje: 'Error interno del servidor' });
+    }
+  };
