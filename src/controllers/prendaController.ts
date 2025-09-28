@@ -52,8 +52,8 @@ export const crearPrenda = async (req: Request, res: Response): Promise<void> =>
 
   const t = await sequelize.transaction();
   try {
-    const { nombre, precio, talles, categoria, imagen } = req.body;
-    const nuevaPrenda = await Prenda.create({ nombre, precio, talles, categoria, imagen }, { transaction: t });
+    const { nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias } = req.body;
+    const nuevaPrenda = await Prenda.create({ nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias }, { transaction: t });
     await t.commit();
     res.status(201).json(nuevaPrenda);
   } catch (error) {
@@ -78,7 +78,16 @@ export const actualizarPrenda = async (req: Request, res: Response): Promise<voi
   const { id } = req.params;
   const t = await sequelize.transaction();
   try {
-    await Prenda.update(req.body, { where: { id }, transaction: t });
+    const { nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias } = req.body;
+    const updateData: any = {};
+    if (nombre !== undefined) updateData.nombre = nombre;
+    if (precio !== undefined) updateData.precio = precio;
+    if (talles !== undefined) updateData.talles = talles;
+    if (categoria !== undefined) updateData.categoria = categoria;
+    if (imagenPrincipal !== undefined) updateData.imagenPrincipal = imagenPrincipal;
+    if (imagenesSecundarias !== undefined) updateData.imagenesSecundarias = imagenesSecundarias;
+
+    await Prenda.update(updateData, { where: { id }, transaction: t });
     await t.commit();
     res.sendStatus(204);
   } catch (error) {
