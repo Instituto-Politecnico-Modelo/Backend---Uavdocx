@@ -25,9 +25,12 @@ export const Prenda = sequelize.define('Prendas',{
 
 
   },
-  imagen: {
+  imagenPrincipal: {
     type: DataTypes.STRING,
-    allowNull: false,
-
+    allowNull: false, 
+  },
+  imagenesSecundarias: {
+    type: DataTypes.JSON,
+    allowNull: true, 
   }
 })
