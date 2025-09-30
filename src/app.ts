@@ -8,11 +8,14 @@ import carritoRoutes from './routes/carritoRoutes';
 import { verificarToken } from './middleware/usuarios';
 import reclamoRoutes from './routes/reclamoRoutes';
 import compraRoutes from './routes/compraRoutes';
+import opinionRoutes from './routes/opinionRoutes';
 
 const app = express();
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(bodyParser.json());
+
+app.use('/opinion', opinionRoutes);
 
 app.use('/compras', compraRoutes);
 
