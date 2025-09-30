@@ -63,10 +63,10 @@ sequelize.sync({ alter: true })
 
         const productos = (carrito.get('productos') || {});
         const items = Object.values(productos).map((prod: any) => ({
-          title: `Producto ${prod.id}`,
+          title: prod.nombre || `Producto ${prod.id}`,
           quantity: prod.cantidad,
           unit_price: prod.precio,
-          id: String(prod.id)
+          id: String(prod.id),
         }));
 
         if (items.length === 0) {
