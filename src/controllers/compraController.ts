@@ -2,7 +2,10 @@ import { Compra } from '../models/compra';
 
 
 export async function crearCompra(data: any) {
-	return await Compra.create(data);
+    if (!Array.isArray(data.productos) || data.productos.length === 0) {
+        throw new Error('La compra debe incluir al menos un producto.');
+    }
+    return await Compra.create(data);
 }
 
 export async function obtenerCompras() {
@@ -14,7 +17,7 @@ export async function obtenerCompraPorId(id: number) {
     return compras.map((compra: any) => ({
         id: compra.id,
         id_usuario: compra.idUsuario,
-        productos: [], 
+        productos: compra.productos, 
         precioTotal: compra.total,
         estado: compra.estado,
         direccionEntrega: compra.direccion,

@@ -1,7 +1,7 @@
 import { Opinion } from '../models/opinion';
 
-export async function crearOpinion(usuarioId: number, compraId: number, calificacion: number, comentario?: string) {
-    return await Opinion.create({ idUsuario: usuarioId, idCompra: compraId, calificacion, comentario });
+export async function crearOpinion(usuarioId: number, compraId: number, calificacion: number, comentario?: string, foto?: string) {
+    return await Opinion.create({ idUsuario: usuarioId, idCompra: compraId, calificacion, comentario, foto });
 }
 
 export async function obtenerOpiniones() {

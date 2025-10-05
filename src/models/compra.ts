@@ -11,8 +11,8 @@ export const Compra = sequelize.define('Compras', {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    idCarrito: {
-        type: DataTypes.INTEGER,
+    productos: {
+        type: DataTypes.JSON,
         allowNull: false,
     },
     total: {
@@ -20,7 +20,7 @@ export const Compra = sequelize.define('Compras', {
         allowNull: false,
     },
     estado: {
-        type: DataTypes.ENUM('pendiente', 'completada', 'cancelada'),
+        type: DataTypes.ENUM('pendiente', 'pagada', 'cancelada', 'entregada'),
         allowNull: false,
         defaultValue: 'pendiente', 
     },

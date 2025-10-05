@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import * as compraController from '../controllers/compraController';
 import { Compra } from '../models/compra';
 
 const router = Router();
+
 
 router.post('/', async (req, res) => {
 	try {
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req: Request, res: Response) => {
 	try {
 		const id = parseInt(req.params.id, 10);
 		if (isNaN(id)) {

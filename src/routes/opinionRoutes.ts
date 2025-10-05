@@ -8,7 +8,7 @@ const router = Router();
 router.post('/:id', verificarToken, async (req, res) => {
     const usuarioId = (req as any).user?.id;
     const compraId = parseInt(req.params.id, 10);
-    const { calificacion, comentario } = req.body;
+    const { calificacion, comentario, foto } = req.body;
 
     if (!usuarioId) {
         return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -22,7 +22,7 @@ router.post('/:id', verificarToken, async (req, res) => {
     }
     
     try {
-        const nueva = await opinionController.crearOpinion(usuarioId, compraId, calificacion, comentario);
+        const nueva = await opinionController.crearOpinion(usuarioId, compraId, calificacion, comentario, foto);
         res.status(201).json(nueva);
     } catch (error: any) {
         if (error.message === 'Ya has dejado una opinión para esta compra.') {
