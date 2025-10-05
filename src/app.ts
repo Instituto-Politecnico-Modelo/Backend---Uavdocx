@@ -7,11 +7,17 @@ import prendaRoutes from './routes/prendaRoutes';
 import carritoRoutes from './routes/carritoRoutes';  
 import { verificarToken } from './middleware/usuarios';
 import reclamoRoutes from './routes/reclamoRoutes';
+import compraRoutes from './routes/compraRoutes';
+import opinionRoutes from './routes/opinionRoutes';
 
 const app = express();
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(bodyParser.json());
+
+app.use('/opinion', opinionRoutes);
+
+app.use('/compras', compraRoutes);
 
 app.use('/reclamos', reclamoRoutes);
 
@@ -60,10 +66,10 @@ sequelize.sync({ alter: true })
 
         const productos = (carrito.get('productos') || {});
         const items = Object.values(productos).map((prod: any) => ({
-          title: `Producto ${prod.id}`,
+          title: prod.nombre || `Producto ${prod.id}`,
           quantity: prod.cantidad,
           unit_price: prod.precio,
-          id: String(prod.id)
+          id: String(prod.id),
         }));
 
         if (items.length === 0) {

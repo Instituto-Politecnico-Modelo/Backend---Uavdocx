@@ -24,6 +24,8 @@ export async function verificarVerificado(usuarioId: number): Promise<boolean> {
 
 type ProductoCarrito = { id: number; cantidad: number; precio: number; talle: string };
 
+
+
 export const agregarAlCarrito = async (req: Request, res: Response): Promise<void> => {
   const usuarioId = (req as any).user?.id;
   const autorizado = await verificarVerificado(usuarioId);
@@ -132,7 +134,6 @@ export const eliminarProductoCarrito = async (req: Request, res: Response): Prom
     const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
     if (productos[clave]) {
       delete productos[clave];
-      // Recalcular precio total
       let precioTotal = 0;
       for (const key in productos) {
         const prod = productos[key];
@@ -176,7 +177,6 @@ export const sumarCantidadCarrito = async (req: Request, res: Response): Promise
     const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
     if (productos[clave]) {
       productos[clave].cantidad += 1;
-      // Recalcular precio total
       let precioTotal = 0;
       for (const key in productos) {
         const prod = productos[key];
@@ -223,7 +223,6 @@ export const restarCantidadCarrito = async (req: Request, res: Response): Promis
       if (productos[clave].cantidad <= 0) {
         delete productos[clave];
       }
-      // Recalcular precio total
       let precioTotal = 0;
       for (const key in productos) {
         const prod = productos[key];
