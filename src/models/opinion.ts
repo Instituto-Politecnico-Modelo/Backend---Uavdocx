@@ -9,6 +9,10 @@ export const Opinion = sequelize.define('Opiniones', {
         autoIncrement: true,
         primaryKey: true,
     },
+    usuario:{
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
     idUsuario: {
         type: DataTypes.INTEGER,
         allowNull: false,
