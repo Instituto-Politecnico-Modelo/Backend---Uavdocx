@@ -96,13 +96,14 @@ export const comprobarUsuario = async (req: Request, res: Response): Promise<voi
 
     if (passBien) {
       const id = usuario.getDataValue('id');
+      const admin = usuario.getDataValue('admin');
       const token = jwt.sign(
-        { id, usuario: usuario_ingreso },
+        { id, usuario: usuario_ingreso, admin },
         SECRET_KEY,
         { expiresIn: '8h' }
       );
 
-      res.status(200).json({ mensaje: 'Login correcto', token, id });
+      res.status(200).json({ mensaje: 'Login correcto', token, id, admin });
     } else {
       res.status(401).json({ mensaje: 'La contraseña es incorrecta' });
     }
