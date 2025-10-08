@@ -23,10 +23,9 @@ export function verificarToken(req: Request, res: Response, next: NextFunction):
   });
 }
 
-export async function soloAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+export function soloAdmin(req: Request, res: Response, next: NextFunction): void {
   const userData = (req as any).user;
-  const usuario = await Usuario.findByPk(userData.id);
-  if (!usuario || !usuario.get('admin')) {
+  if (!userData || !userData.admin) {
     res.status(403).json({ message: 'Solo administradores pueden realizar esta acción' });
     return;
   }

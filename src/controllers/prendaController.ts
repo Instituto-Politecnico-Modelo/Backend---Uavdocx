@@ -3,14 +3,9 @@ import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
 import { literal, Op } from 'sequelize';
 import { Usuario } from '../models/usuarios'; 
+import { soloAdmin } from '../middleware/usuarios';
 
-export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
-  const usuario = await Usuario.findByPk(usuarioId);
-  if (!usuario) return false;
 
-  const { verificado, admin } = usuario.get();
-  return verificado === true && admin === true;
-}
 
 
 
@@ -43,11 +38,7 @@ export async function verificarVerificado(usuarioId: number): Promise<boolean> {
 export const crearPrenda = async (req: Request, res: Response): Promise<void> => {
   const usuarioId = (req as any).user?.id;
 
-  const autorizado = await verificarPermisosAdministrador(usuarioId);
-  if (!autorizado) {
-    res.status(403).json({ error: 'No tenes los permisos para realizar esta acción.' });
-    return;
-  }
+
 
   const t = await sequelize.transaction();
   try {
@@ -68,11 +59,7 @@ export const crearPrenda = async (req: Request, res: Response): Promise<void> =>
 export const actualizarPrenda = async (req: Request, res: Response): Promise<void> => {
   const usuarioId = (req as any).user?.id;
 
-  const autorizado = await verificarPermisosAdministrador(usuarioId);
-  if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
-  }
+
 
   const { id } = req.params;
   const t = await sequelize.transaction();
@@ -98,14 +85,7 @@ export const actualizarPrenda = async (req: Request, res: Response): Promise<voi
 
 
 export const eliminarPrenda = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
-
-  const autorizado = await verificarPermisosAdministrador(usuarioId);
-  if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
-  }
-
+ 
   const { id } = req.params;
   const t = await sequelize.transaction();
   try {
