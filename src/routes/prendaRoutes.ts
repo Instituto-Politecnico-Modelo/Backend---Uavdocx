@@ -4,13 +4,14 @@ import { filtrarPrendas ,crearPrenda, obtenerPrendas, actualizarPrenda, eliminar
 
 const router = Router();
 
-import { verificarToken } from '../middleware/usuarios';
 
-router.post('/crearPrenda', verificarToken, crearPrenda);
+import { verificarToken, soloAdmin } from '../middleware/usuarios';
+
+router.post('/crearPrenda', verificarToken, soloAdmin, crearPrenda);
 router.get('/buscarPrendas', buscarPrendasPorNombre);
 router.get('/listarPrendas', obtenerPrendas);
-router.put('/:id', verificarToken, actualizarPrenda);
-router.delete('/:id', verificarToken,  eliminarPrenda);
+router.put('/:id', verificarToken, soloAdmin, actualizarPrenda);
+router.delete('/:id', verificarToken, soloAdmin, eliminarPrenda);
 router.get('/cargarPrendas',cargarPrendas);
 
 router.get('/:id', getPrendaPorId);
