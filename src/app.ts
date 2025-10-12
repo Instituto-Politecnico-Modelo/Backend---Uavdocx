@@ -81,6 +81,7 @@ sequelize.sync({ alter: true })
           id: 'envio'
         });
       }
+      
 
       if (items.length === 0) {
         res.status(400).json({ error: 'El carrito está vacío' });
