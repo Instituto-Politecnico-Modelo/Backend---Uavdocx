@@ -25,7 +25,6 @@ app.use('/usuarios', usuariosRoutes);
 
 app.use('/prendas', prendaRoutes);
 app.use('/carrito', carritoRoutes);
-
 app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
