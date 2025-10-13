@@ -15,3 +15,12 @@ export async function obtenerOpiniones() {
 export async function opinionesUsuario(usuarioId: number) {
     return await Opinion.findAll({ where: { idUsuario: usuarioId } });
 }
+
+export async function eliminarOpinion(id: number) {
+    const opinion = await Opinion.findByPk(id);
+    if (opinion) {
+        await opinion.destroy();
+        return true;
+    }
+    return false;
+}

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as compraController from '../controllers/compraController';
+import { verificarToken, soloAdmin } from '../middleware/usuarios';
 import { Compra } from '../models/compra';
 
 const router = Router();
@@ -17,7 +18,7 @@ router.post('/', async (req, res) => {
 
 
 
-router.get('/', async (req, res) => {
+router.get('/', verificarToken, soloAdmin, async (req, res) => {
 	try {
 		const compras = await compraController.obtenerCompras();
 		res.status(200).json(compras);
