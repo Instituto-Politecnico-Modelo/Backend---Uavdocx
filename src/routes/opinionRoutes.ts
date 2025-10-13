@@ -68,6 +68,18 @@ router.get('/usuario/:id', verificarToken, async (req, res) => {
     }
 });
 
+router.delete('/:id', verificarToken, async (req, res) => {
+    const opinionId = parseInt(req.params.id, 10);
+    const usuarioId = (req as any).user?.id;
+
+    if (!usuarioId) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    return opinionController.eliminarOpinion(opinionId);
+});
+
+
 
 
 export default router;
