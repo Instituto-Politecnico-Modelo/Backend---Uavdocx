@@ -214,3 +214,13 @@ export const getPrendaPorId = async (req: Request, res: Response): Promise<void>
   return;
   }
 };
+
+export async function restarStockPrenda(id: number, talle: string, cantidad: number): Promise<boolean> {
+  const prenda = await Prenda.findByPk(id);
+  if (!prenda) return false;
+  const talles = prenda.get('talles') as { [key: string]: number };
+  if (!(talle in talles) || talles[talle] < cantidad) return false;
+  talles[talle] -= cantidad;
+  await prenda.update({ talles });
+  return true;
+}

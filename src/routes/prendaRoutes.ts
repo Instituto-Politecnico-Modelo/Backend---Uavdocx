@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { filtrarPrendas ,crearPrenda, obtenerPrendas, actualizarPrenda, eliminarPrenda, cargarPrendas, buscarPrendasPorNombre, 
-    getPrendaPorId, talleDisponibleHandler } from '../controllers/prendaController';
+    getPrendaPorId, talleDisponibleHandler, restarStockPrenda } from '../controllers/prendaController';
 
 const router = Router();
 
@@ -20,6 +20,20 @@ router.get('/:id', getPrendaPorId);
 router.post('/filtrar', filtrarPrendas)
 router.get('/productos', obtenerPrendas)
 router.get('/talleDisponible/:id/:talle/:cantidad', talleDisponibleHandler)
+
+router.post('/restarStock', async (req, res) => {
+    const { id, talle, cantidad } = req.body;
+    try {
+        const exito = await restarStockPrenda(id, talle, cantidad);
+        if (exito) {
+            res.status(200).json({ message: 'Stock actualizado correctamente' });
+        } else {
+            res.status(400).json({ error: 'No se pudo actualizar el stock. Verifique los datos.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Error al actualizar el stock' });
+    }
+});
 
 
 export default router;

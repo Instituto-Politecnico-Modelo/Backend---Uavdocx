@@ -43,5 +43,17 @@ router.get('/:id', async (req: Request, res: Response) => {
 	}
 });
 
+router.put('/modificar/:id/', verificarToken, soloAdmin, async (req: Request, res: Response) => {
+	try {
+		const id = parseInt(req.params.id, 10);
+		if (isNaN(id)) {
+			return res.status(400).json({ error: 'ID inválido' });
+		}
+		const { estado, fechaEntrega } = req.body;
+		await compraController.modificarCompra(id, { estado, fechaEntrega });
+	}catch (error: any) {
+		res.status(500).json({ error: error.message || 'Error al modificar la compra' });
+	}
+});
 
 export default router;
