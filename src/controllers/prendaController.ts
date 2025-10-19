@@ -1,13 +1,7 @@
-import { Request, Response } from 'express';
 import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
 import { literal, Op } from 'sequelize';
-import { Usuario } from '../models/usuarios'; 
-import { soloAdmin } from '../middleware/usuarios';
-
-
-
-
+import { Usuario } from '../models/usuarios';
 
 export async function talleDisponiblePorPrenda(id: number, talle: string, cantidad: number): Promise<{disponible: boolean, stockActual: number | null}> {
   const prenda = await Prenda.findByPk(id);
@@ -16,152 +10,99 @@ export async function talleDisponiblePorPrenda(id: number, talle: string, cantid
   const stockActual = talles[talle] ?? null;
   return { disponible: stockActual !== null && stockActual >= cantidad, stockActual };
 }
-export const talleDisponibleHandler = async (req: Request, res: Response) => {
-  const { id, talle, cantidad } = req.params;
-  try {
-    const result = await talleDisponiblePorPrenda(Number(id), talle, Number(cantidad));
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al verificar disponibilidad de talle' });
-  }
-};
 
 export async function verificarVerificado(usuarioId: number): Promise<boolean> {
   const usuario = await Usuario.findByPk(usuarioId);
   if (!usuario) return false;
-
   const { verificado } = usuario.get();
   return verificado === true;
 }
 
-
-export const crearPrenda = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
-
-
-
+export async function crearPrenda(nombre: string, precio: number, talles: any, categoria: string, imagenPrincipal: string, imagenesSecundarias?: any) {
   const t = await sequelize.transaction();
   try {
-    const { nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias } = req.body;
     const nuevaPrenda = await Prenda.create({ nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias }, { transaction: t });
     await t.commit();
-    res.status(201).json(nuevaPrenda);
+    return nuevaPrenda;
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al crear la prenda' });
+    throw new Error('Error al crear la prenda');
   }
-};
+}
 
-
-
-
-
-export const actualizarPrenda = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
-
-
-
-  const { id } = req.params;
+export async function actualizarPrenda(id: number, nombre?: string, precio?: number, talles?: any, categoria?: string, imagenPrincipal?: string, imagenesSecundarias?: any) {
   const t = await sequelize.transaction();
   try {
-    const { nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias } = req.body;
     const updateData: any = {};
-    if (nombre !== undefined) updateData.nombre = nombre;
-    if (precio !== undefined) updateData.precio = precio;
-    if (talles !== undefined) updateData.talles = talles;
-    if (categoria !== undefined) updateData.categoria = categoria;
-    if (imagenPrincipal !== undefined) updateData.imagenPrincipal = imagenPrincipal;
-    if (imagenesSecundarias !== undefined) updateData.imagenesSecundarias = imagenesSecundarias;
-
     await Prenda.update(updateData, { where: { id }, transaction: t });
     await t.commit();
-    res.sendStatus(204);
+    return true;
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al actualizar la prenda' });
+    throw new Error('Error al actualizar la prenda');
   }
-};
+}
 
-
-
-export const eliminarPrenda = async (req: Request, res: Response): Promise<void> => {
- 
-  const { id } = req.params;
+export async function eliminarPrenda(id: number) {
   const t = await sequelize.transaction();
   try {
     await Prenda.destroy({ where: { id }, transaction: t });
     await t.commit();
-    res.sendStatus(204);
+    return true;
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al eliminar la prenda' });
+    throw new Error('Error al eliminar la prenda');
   }
-};
+}
 
-
-
-
-
-export const cargarPrendas = async (req: Request, res: Response) => {
+export async function cargarPrendas() {
   try {
-    const prendas = await Prenda.findAll(); 
-    res.status(200).json(prendas);
+    const prendas = await Prenda.findAll();
+    return prendas;
   } catch (error) {
-    console.error("Error al listar prendas:", error);
-    res.status(500).json({ error: 'Error al obtener las prendas' });
+    throw new Error('Error al obtener las prendas');
   }
-};
+}
 
-export const buscarPrendasPorNombre = async (req: Request, res: Response) => {
-  const { nombre } = req.query;
+export async function buscarPrendasPorNombre(nombre?: string) {
   try {
     const prendas = await Prenda.findAll({
       where: nombre
         ? { nombre: { [Op.like]: `%${nombre}%` } }
         : {}
     });
-    res.json(prendas);
+    return prendas;
   } catch (error: any) {
-    console.error('Error en buscarPrendasPorNombre:', error.message);
-    res.status(500).json({ error: error.message });
+    throw new Error(error.message || 'Error en buscarPrendasPorNombre');
   }
-};
+}
 
-export const obtenerPrendas = async (req: Request, res: Response) => {
-  console.log('obtenerPrendas: inicio');
+export async function obtenerPrendas(page?: number, limit?: number) {
   try {
-    console.log('obtenerPrendas: req.query', req.query);
-    const page = parseInt(req.query.page as string);
-    const limit = parseInt(req.query.limit as string);
-    console.log('obtenerPrendas: page', page, 'limit', limit);
-
-    const offset = (page - 1) * limit;
-    console.log('obtenerPrendas: offset', offset);
-    const { rows: prendas, count: total } = await Prenda.findAndCountAll({
-      limit, 
-      offset
-    });
-    console.log('obtenerPrendas: prendas encontradas', prendas);
-    console.log('obtenerPrendas: total', total);
-
-    res.status(200).json({
-      total,
-      page,
-      limit,
-      data: prendas
-    });
-    console.log('obtenerPrendas: respuesta enviada');
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      const { rows: prendas, count: total } = await Prenda.findAndCountAll({
+        limit,
+        offset
+      });
+      return {
+        total,
+        page,
+        limit,
+        data: prendas
+      };
+    } else {
+      const prendas = await Prenda.findAll();
+      return prendas;
+    }
   } catch (error) {
-    console.error('obtenerPrendas: error', error);
-    res.status(500).json({ error: 'Error al obtener las prendas' });
+    throw new Error('Error al obtener las prendas');
   }
-};
+}
 
-export const filtrarPrendas = async (req: Request, res: Response) => {//talles todavia no
+export async function filtrarPrendas(minimo?: number, maximo?: number, categoria?: string, talles?: any) {
   try {
-    const { minimo, maximo, categoria, talles } = req.body;
     const whereClause: any = {};
-
     if (minimo !== undefined && maximo !== undefined) {
       whereClause.precio = { [Op.between]: [minimo, maximo] };
     } else if (minimo !== undefined) {
@@ -169,51 +110,40 @@ export const filtrarPrendas = async (req: Request, res: Response) => {//talles t
     } else if (maximo !== undefined) {
       whereClause.precio = { [Op.lte]: maximo };
     }
-
     if (categoria) {
       whereClause.categoria = categoria;
     }
-
     const tallesConditions: any[] = [];
     if (talles && typeof talles === 'object') {
       for (const [talle, cantidad] of Object.entries(talles)) {
         tallesConditions.push(
-          literal(`("talles"->>'${talle}')::int >= ${cantidad}`)
+          literal(`(\"talles\"->>'${talle}')::int >= ${cantidad}`)
         );
-
       }
     }
-
     const prendas = await Prenda.findAll({
       where: {
         ...whereClause,
         ...(tallesConditions.length > 0 ? { [Op.and]: tallesConditions } : {})
       }
     });
-
-    res.status(200).json(prendas);
+    return prendas;
   } catch (error) {
-    console.error('Error en filtrarPrendas:', error);
-    res.status(500).json({ error: 'Error al filtrar las prendas' });
+    throw new Error('Error al filtrar las prendas');
   }
-};
+}
 
-
-export const getPrendaPorId = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+export async function getPrendaPorId(id: number) {
   try {
     const prenda = await Prenda.findByPk(id);
     if (!prenda) {
-      res.status(404).json({ error: 'Prenda no encontrada' });
-      return;
+      return null;
     }
-  res.status(200).json(prenda);
-  return;
+    return prenda;
   } catch (error) {
-  res.status(500).json({ error: 'Error al obtener la prenda' });
-  return;
+    throw new Error('Error al obtener la prenda');
   }
-};
+}
 
 export async function restarStockPrenda(id: number, talle: string, cantidad: number): Promise<boolean> {
   const prenda = await Prenda.findByPk(id);
