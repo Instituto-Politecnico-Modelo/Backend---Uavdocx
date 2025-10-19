@@ -1,92 +1,71 @@
 import { Reclamo } from '../models/reclamo';
 import { Request, Response, RequestHandler } from 'express';
 
-export const crearReclamo: RequestHandler = async (req, res) => {
+export async function crearReclamo(idUsuario: number, tipo: string, descripcion: string) {
 	try {
-		const { idUsuario, tipo, descripcion } = req.body;
-		const nuevoReclamo = await Reclamo.create({
-			idUsuario,
-			tipo,
-			descripcion
-		});
-		res.status(201).json(nuevoReclamo);
-		return;
+		const nuevoReclamo = await Reclamo.create({ idUsuario, tipo, descripcion });
+		return nuevoReclamo;
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al crear el reclamo', details: error.message });
-		return;
+		throw new Error(error.message || 'Error al crear el reclamo');
 	}
-};
+}
 
-export const obtenerReclamos: RequestHandler = async (req, res) => {
+export async function obtenerReclamos() {
 	try {
 		const reclamos = await Reclamo.findAll();
-		res.json(reclamos);
-		return;
+		return reclamos;
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al obtener los reclamos', details: error.message });
-		return;
+		throw new Error(error.message || 'Error al obtener los reclamos');
 	}
-};
+}
 
-export const obtenerReclamoPorId: RequestHandler = async (req, res) => {
+export async function obtenerReclamoPorId(id: number) {
 	try {
-		const { id } = req.params;
 		const reclamo = await Reclamo.findByPk(id);
 		if (!reclamo) {
-			res.status(404).json({ error: 'Reclamo no encontrado' });
-			return;
+			return null;
 		}
-		res.json(reclamo);
-		return;
+		return reclamo;
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al obtener el reclamo', details: error.message });
-		return;
+		throw new Error(error.message || 'Error al obtener el reclamo');
 	}
-};
+}
 
-export const modificarReclamo: RequestHandler = async (req, res) => {
+export async function modificarReclamo(id: number, tipo?: string, descripcion?: string, estado?: string, fecha_resolucion?: Date) {
 	try {
-		const { id } = req.params;
-		const { tipo, descripcion, estado, fecha_resolucion } = req.body;
 		const reclamo = await Reclamo.findByPk(id);
 		if (!reclamo) {
-			res.status(404).json({ error: 'Reclamo no encontrado' });
-			return;
+			return null;
 		}
 		await reclamo.update({ tipo, descripcion, estado, fecha_resolucion });
-		res.json(reclamo);
-		return;
+		return reclamo;
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al modificar el reclamo', details: error.message });
-		return;
+		throw new Error(error.message || 'Error al modificar el reclamo');
 	}
-};
+}
 
-export const eliminarReclamo: RequestHandler = async (req, res) => {
+export async function eliminarReclamo(id: number, idUsuarioSolicitante: number, rol: string) {
 	try {
-		const { id } = req.params;
 		const reclamo = await Reclamo.findByPk(id);
 		if (!reclamo) {
-			res.status(404).json({ error: 'Reclamo no encontrado' });
-			return;
+			return false;
 		}
-		await reclamo.destroy();
-		res.json({ mensaje: 'Reclamo eliminado correctamente' });
-		return;
+	if (rol === 'admin' || reclamo.get('idUsuario') === idUsuarioSolicitante) {
+			await reclamo.destroy();
+			return true;
+		} else {
+			return null;
+		}
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al eliminar el reclamo', details: error.message });
-		return;
+		throw new Error(error.message || 'Error al eliminar el reclamo');
 	}
-};
+}
 
-export const obtenerReclamosPorUsuario: RequestHandler = async (req, res) => {
+export async function obtenerReclamosPorUsuario(idUsuario: number) {
 	try {
-		const { idUsuario } = req.params;
 		const reclamos = await Reclamo.findAll({ where: { idUsuario } });
-		res.json(reclamos);
-		return;
+		return reclamos;
 	} catch (error: any) {
-		res.status(500).json({ error: 'Error al obtener los reclamos del usuario', details: error.message });
-		return;
-	}	
-};
+		throw new Error(error.message || 'Error al obtener los reclamos del usuario');
+	}
+}

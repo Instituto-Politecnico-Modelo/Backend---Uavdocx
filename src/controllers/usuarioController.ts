@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { Request, Response } from 'express';
 import { Usuario } from '../models/usuarios';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -9,263 +8,157 @@ import validator from 'validator';
 import { enviarCorreoVerificacion, enviarCorreoReset } from '../utils/email'; 
 import { sequelize } from '../config/db'; 
 
-export const obtenerTodosUsuarios = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const usuarios = await Usuario.findAll();
-    res.status(200).json(usuarios);
-  } catch (error) {
-    console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ mensaje: 'Error al obtener usuarios', error });
-  }
-};
-
-
-
 const SECRET_KEY: string = process.env.CLAVE || '';
 
-export const registrarUsuario = async (req: Request, res: Response): Promise<void> => {
-  const { usuario, email, contrasenia } = req.body;
-
-  if (!usuario || !email || !contrasenia) {
-    res.status(400).json({ mensaje: 'Faltan datos back' });
-    return;
+export async function obtenerTodosUsuarios() {
+  try {
+    const usuarios = await Usuario.findAll();
+    return usuarios;
+  } catch (error) {
+    throw new Error('Error al obtener usuarios');
   }
+}
 
-  if (!validator.isEmail(email)) {
-    res.status(400).json({ mensaje: 'Email inválido' });
-    return;
-  }
-
+export async function registrarUsuario(usuario: string, email: string, contrasenia: string) {
+  if (!usuario || !email || !contrasenia) throw new Error('Faltan datos back');
+  if (!validator.isEmail(email)) throw new Error('Email inválido');
   const t = await sequelize.transaction();
   try {
     const usuarioExistente = await Usuario.findOne({ where: { usuario }, transaction: t, lock: t.LOCK.UPDATE });
     if (usuarioExistente) {
       await t.rollback();
-      res.status(409).json({ mensaje: 'El usuario ya existe' });
-      return;
+      throw new Error('El usuario ya existe');
     }
-
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(contrasenia, saltRounds);
-
-    const nuevoUsuario = await Usuario.create({
-      usuario,
-      email,
-      contrasenia: hashedPassword,
-      verificado: false, 
-    }, { transaction: t });
-
-    const tokenVerificacion = jwt.sign(
-      { email },
-      SECRET_KEY,
-      { expiresIn: '8h' }
-    );
-
+    await Usuario.create({ usuario, email, contrasenia: hashedPassword, verificado: false }, { transaction: t });
+    const tokenVerificacion = jwt.sign({ email }, SECRET_KEY, { expiresIn: '8h' });
     await enviarCorreoVerificacion(email, tokenVerificacion);
-
     await t.commit();
-    res.status(201).json({ mensaje: 'Usuario registrado. Revisa tu correo para confirmar tu cuenta.' });
+    return { mensaje: 'Usuario registrado. Revisa tu correo para confirmar tu cuenta.' };
   } catch (error: any) {
     await t.rollback();
-    console.error('Error en registrarUsuario:', error);
-    res.status(500).json({
-      mensaje: 'Error al registrar usuario',
-      error: error.errors?.[0]?.message || error.message || error
-    });
+    throw new Error(error.errors?.[0]?.message || error.message || 'Error al registrar usuario');
   }
-};
+}
 
-export const comprobarUsuario = async (req: Request, res: Response): Promise<void> => {
-  const { usuario_ingreso, pass_ingreso } = req.body;
-
-  if (!usuario_ingreso || !pass_ingreso) {
-    res.status(400).json({ mensaje: 'Faltan ingresar datos' });
-    return;
-  }
-
+export async function comprobarUsuario(usuario_ingreso: string, pass_ingreso: string) {
+  if (!usuario_ingreso || !pass_ingreso) throw new Error('Faltan ingresar datos');
   try {
     const usuario = await Usuario.findOne({ where: { usuario: usuario_ingreso } });
-
-    if (!usuario) {
-      res.status(404).json({ mensaje: 'El usuario no fue encontrado' });
-      return;
-    }
-
+    if (!usuario) throw new Error('El usuario no fue encontrado');
     const hashBD = usuario.get('contrasenia') as string;
     const passBien = await bcrypt.compare(pass_ingreso, hashBD);
-
     if (passBien) {
       const id = usuario.getDataValue('id');
       const admin = usuario.getDataValue('admin');
-      const token = jwt.sign(
-        { id, usuario: usuario_ingreso, admin },
-        SECRET_KEY,
-        { expiresIn: '8h' }
-      );
-
-      res.status(200).json({ mensaje: 'Login correcto', token, id, admin });
+      const token = jwt.sign({ id, usuario: usuario_ingreso, admin }, SECRET_KEY, { expiresIn: '8h' });
+      return { mensaje: 'Login correcto', token, id, admin };
     } else {
-      res.status(401).json({ mensaje: 'La contraseña es incorrecta' });
+      throw new Error('La contraseña es incorrecta');
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: 'Error al ingresar al usuario' });
+    throw new Error('Error al ingresar al usuario');
   }
-};
+}
 
-export const verificarUsuario = async (req: Request, res: Response): Promise<void> => {
-  const { token } = req.params;
-
+export async function verificarUsuario(token: string) {
   const t = await sequelize.transaction();
   try {
     const payload = jwt.verify(token, SECRET_KEY) as { email: string };
-
     const usuario = await Usuario.findOne({ where: { email: payload.email }, transaction: t, lock: t.LOCK.UPDATE });
-
     if (!usuario) {
       await t.rollback();
-      res.status(404).json({ mensaje: 'Usuario no encontrado' });
-      return;
+      throw new Error('Usuario no encontrado');
     }
-
     await usuario.update({ verificado: true }, { transaction: t });
     await t.commit();
-
-    res.status(200).json({ mensaje: 'Cuenta verificada con éxito, puede volver a la pagina' });
+    return { mensaje: 'Cuenta verificada con éxito, puede volver a la pagina' };
   } catch (error: any) {
     await t.rollback();
-    console.error('Error para verificar usuario:', error);
-    res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message || error });
+    throw new Error(error.message || 'Token inválido o expirado');
   }
-};
+}
 
-
-
-export const verificarPermisosAdministrador = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+export async function verificarPermisosAdministrador(id: number) {
   try {
     const usuario = await Usuario.findByPk(id);
-    if (!usuario) {
-      res.status(404).json({ mensaje: 'Usuario no encontrado' });
-      return;
-    }
+    if (!usuario) throw new Error('Usuario no encontrado');
     const { admin } = usuario.get();
     if (admin === true) {
-      res.status(200).json({ esAdmin: true });
+      return { esAdmin: true };
     } else {
-      res.status(403).json({ esAdmin: false, mensaje: 'No tiene permisos de administrador' });
+      return { esAdmin: false, mensaje: 'No tiene permisos de administrador' };
     }
   } catch (error) {
-    console.error('Error al verificar permisos de administrador:', error);
-    res.status(500).json({ mensaje: 'Error interno del servidor' });
+    throw new Error('Error interno del servidor');
   }
-};
+}
 
-export const solicitarResetContrasenia = async (req: Request, res: Response): Promise<void> => {
-  const { email } = req.body;
-
-  if (!email || !validator.isEmail(email)) {
-    res.status(400).json({ mensaje: 'Email inválido' });
-    return;
-  }
-
+export async function solicitarResetContrasenia(email: string) {
+  if (!email || !validator.isEmail(email)) throw new Error('Email inválido');
   try {
     const usuario = await Usuario.findOne({ where: { email } });
-    if (!usuario) {
-      res.status(404).json({ mensaje: 'No existe un usuario con ese email' });
-      return;
-    }
-
+    if (!usuario) throw new Error('No existe un usuario con ese email');
     const token = jwt.sign({ email }, SECRET_KEY, { expiresIn: '15m' });
     await enviarCorreoReset(email, token);
-
-    res.status(200).json({ mensaje: 'Correo enviado para restablecer contraseña' });
+    return { mensaje: 'Correo enviado para restablecer contraseña' };
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: 'Error al solicitar restablecimiento' });
+    throw new Error('Error al solicitar restablecimiento');
   }
-};
+}
 
-export const resetearContrasenia = async (req: Request, res: Response): Promise<void> => {
-  const token = req.params.token || req.body.token;
-  const { nuevaContrasenia } = req.body;
-  console.log('Token recibido:', token);
-
-  if (!nuevaContrasenia) {
-    res.status(400).json({ mensaje: 'Falta la nueva contraseña' });
-    return;
-  }
-
+export async function resetearContrasenia(token: string, nuevaContrasenia: string) {
+  if (!nuevaContrasenia) throw new Error('Falta la nueva contraseña');
   const t = await sequelize.transaction();
   try {
     const { email } = jwt.verify(token, SECRET_KEY) as { email: string };
-
     const usuario = await Usuario.findOne({ where: { email }, transaction: t, lock: t.LOCK.UPDATE });
     if (!usuario) {
       await t.rollback();
-      res.status(404).json({ mensaje: 'Usuario no encontrado' });
-      return;
+      throw new Error('Usuario no encontrado');
     }
-
     const hashed = await bcrypt.hash(nuevaContrasenia, 10);
     await usuario.update({ contrasenia: hashed }, { transaction: t });
-
     await t.commit();
-    res.status(200).json({ mensaje: 'Contraseña actualizada correctamente' });
+    return { mensaje: 'Contraseña actualizada correctamente' };
   } catch (error: any) {
     await t.rollback();
-    console.error('Error en resetearContrasenia:', error);
-    res.status(400).json({ mensaje: 'Token inválido o expirado', error: error.message });
+    throw new Error(error.message || 'Token inválido o expirado');
   }
-  };
+}
 
-  export const cambiarEstadoAdministrador = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    try {
-      const usuario = await Usuario.findByPk(id);
-      if (!usuario) {
-        res.status(404).json({ mensaje: 'Usuario no encontrado' });
-        return;
-      }
-      const esAdminActual = usuario.get('admin');
-      await usuario.update({ admin: !esAdminActual });
-      res.status(200).json({ mensaje: `Estado de administrador cambiado a ${!esAdminActual}` });
-    } catch (error) {
-      console.error('Error al cambiar estado de administrador:', error);
-      res.status(500).json({ mensaje: 'Error interno del servidor' });
-    }
-  };
+export async function cambiarEstadoAdministrador(id: number) {
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) throw new Error('Usuario no encontrado');
+    const esAdminActual = usuario.get('admin');
+    await usuario.update({ admin: !esAdminActual });
+    return { mensaje: `Estado de administrador cambiado a ${!esAdminActual}` };
+  } catch (error) {
+    throw new Error('Error interno del servidor');
+  }
+}
 
-  export const cambiarEstadoVerificado = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    try {
-      const usuario = await Usuario.findByPk(id);
-      if (!usuario) {
-        res.status(404).json({ mensaje: 'Usuario no encontrado' });
-        return;
-      }
-      const esVerificadoActual = usuario.get('verificado');
-      await usuario.update({ verificado: !esVerificadoActual });
-      res.status(200).json({ mensaje: `Estado de verificado cambiado a ${!esVerificadoActual}` });
-    } catch (error) {
-      console.error('Error al cambiar estado de verificado:', error);
-      res.status(500).json({ mensaje: 'Error interno del servidor' });
-    }
-  };
+export async function cambiarEstadoVerificado(id: number) {
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) throw new Error('Usuario no encontrado');
+    const esVerificadoActual = usuario.get('verificado');
+    await usuario.update({ verificado: !esVerificadoActual });
+    return { mensaje: `Estado de verificado cambiado a ${!esVerificadoActual}` };
+  } catch (error) {
+    throw new Error('Error interno del servidor');
+  }
+}
 
-  export const eliminarUsuario = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    try {
-      const usuario = await Usuario.findByPk(id);
-      if (!usuario) {
-        res.status(404).json({ mensaje: 'Usuario no encontrado' });
-        return;
-      }
-
-      await usuario.destroy();
-      res.status(200).json({ mensaje: 'Usuario eliminado correctamente' });
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-      res.status(500).json({ mensaje: 'Error interno del servidor' });
-    }
-  };
+export async function eliminarUsuario(id: number) {
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) throw new Error('Usuario no encontrado');
+    await usuario.destroy();
+    return { mensaje: 'Usuario eliminado correctamente' };
+  } catch (error) {
+    throw new Error('Error interno del servidor');
+  }
+}

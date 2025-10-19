@@ -56,4 +56,9 @@ export const Compra = sequelize.define('Compras', {
     envio: {
         type: DataTypes.ENUM('MOTOMENSAJERIA', 'CORREOARGENTINO', 'PUDO', 'OCA', 'SUCURSAL'),
         allowNull: false,
-    }});
+    },
+    fechaEntrega: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    }
+});
