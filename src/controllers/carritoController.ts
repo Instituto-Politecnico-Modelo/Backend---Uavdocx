@@ -6,13 +6,6 @@ import { Prenda } from '../models/prendas';
 
 
 
-export async function verificarPermisosAdministrador(usuarioId: number): Promise<boolean> {
-  const usuario = await Usuario.findByPk(usuarioId);
-  if (!usuario) return false;
-
-  const { verificado, admin } = usuario.get();
-  return verificado === true && admin === true;
-}
 
 export async function verificarVerificado(usuarioId: number): Promise<boolean> {
   const usuario = await Usuario.findByPk(usuarioId);
@@ -26,25 +19,19 @@ type ProductoCarrito = { id: number; cantidad: number; precio: number; talle: st
 
 
 
-export const agregarAlCarrito = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
+export async function agregarAlCarrito(usuarioId: number, productos: any[]): Promise<{ message: string } | { error: string }> {
   const autorizado = await verificarVerificado(usuarioId);
   if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
+    return { error: 'No tenés permisos para realizar esta acción.' };
   }
-
-  const { productos } = req.body;
   const t = await sequelize.transaction();
   try {
     let carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
     let nuevosProductos: { [key: string]: ProductoCarrito } = {};
-
     if (carrito) {
       const actuales = (carrito.get('productos') as { [key: string]: ProductoCarrito }) || {};
       nuevosProductos = { ...actuales };
     }
-
     for (const prod of productos) {
       const prenda = await Prenda.findByPk(prod.id);
       if (prenda) {
@@ -58,14 +45,11 @@ export const agregarAlCarrito = async (req: Request, res: Response): Promise<voi
         }
       }
     }
-
-
     let precioTotal = 0;
     for (const key in nuevosProductos) {
       const producto = nuevosProductos[key];
       precioTotal += producto.precio * producto.cantidad;
     }
-
     if (!carrito) {
       await Carrito.create({ idUsuario: usuarioId, productos: nuevosProductos, precioTotal }, { transaction: t });
     } else {
@@ -76,60 +60,49 @@ export const agregarAlCarrito = async (req: Request, res: Response): Promise<voi
       await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
     }
     await t.commit();
-    res.status(200).json({ message: 'Productos agregados al carrito' });
+    return { message: 'Productos agregados al carrito' };
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al agregar productos al carrito' });
+    return { error: 'Error al agregar productos al carrito' };
   }
-};
+}
 
-export const obtenerCarrito = async (req: Request, res: Response): Promise<void> => { 
-  const usuarioId = (req as any).user?.id;
+export async function obtenerCarrito(usuarioId: number): Promise<{ productos: any[]; precioTotal: number } | { error: string }> {
   const autorizado = await verificarVerificado(usuarioId);
   if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para obtener el carrito.' });
-    return;
+    return { error: 'No tenés permisos para obtener el carrito.' };
   }
-
   try {
     let carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
     if (!carrito) {
       carrito = await Carrito.create({ idUsuario: usuarioId, productos: {} as { [key: string]: ProductoCarrito }, precioTotal: 0 });
-      res.status(201).json({ productos: [], precioTotal: 0 });
-      return;
+      return { productos: [], precioTotal: 0 };
     }
-
     const productos = (carrito.get('productos') as { [key: string]: ProductoCarrito }) || {};
     const productosArray = Object.entries(productos).map(([key, value]) => ({
       ...value,
       clave: key
     }));
     const precioTotal = carrito.get('precioTotal') as number || 0;
-
-    res.status(200).json({ productos: productosArray, precioTotal });
+    return { productos: productosArray, precioTotal };
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener el carrito' });
+    return { error: 'Error al obtener el carrito' };
   }
-};
+}
 
 
-export const eliminarProductoCarrito = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
+export async function eliminarProductoCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
   const autorizado = await verificarVerificado(usuarioId);
   if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
+    return { error: 'No tenés permisos para realizar esta acción.' };
   }
-
-  const { productoId, talle } = req.body;
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
     if (!carrito) {
-      res.status(404).json({ error: 'Carrito no encontrado.' });
       await t.rollback();
-      return;
+      return { error: 'Carrito no encontrado.' };
     }
     const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
     if (productos[clave]) {
@@ -145,34 +118,29 @@ export const eliminarProductoCarrito = async (req: Request, res: Response): Prom
       carrito.changed('precioTotal' as any, true);
       await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
       await t.commit();
-      res.status(200).json({ message: 'Producto eliminado del carrito.' });
+      return { message: 'Producto eliminado del carrito.' };
     } else {
       await t.rollback();
-      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
+      return { error: 'Producto no encontrado en el carrito.' };
     }
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al eliminar producto del carrito.' });
+    return { error: 'Error al eliminar producto del carrito.' };
   }
-};
+}
 
-export const sumarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
+export async function sumarCantidadCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
   const autorizado = await verificarVerificado(usuarioId);
   if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
+    return { error: 'No tenés permisos para realizar esta acción.' };
   }
-
-  const { productoId, talle } = req.body;
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
     if (!carrito) {
-      res.status(404).json({ error: 'Carrito no encontrado.' });
       await t.rollback();
-      return;
+      return { error: 'Carrito no encontrado.' };
     }
     const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
     if (productos[clave]) {
@@ -188,34 +156,29 @@ export const sumarCantidadCarrito = async (req: Request, res: Response): Promise
       carrito.changed('precioTotal' as any, true);
       await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
       await t.commit();
-      res.status(200).json({ message: 'Cantidad aumentada.' });
+      return { message: 'Cantidad aumentada.' };
     } else {
       await t.rollback();
-      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
+      return { error: 'Producto no encontrado en el carrito.' };
     }
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al aumentar cantidad.' });
+    return { error: 'Error al aumentar cantidad.' };
   }
-};
+}
 
-export const restarCantidadCarrito = async (req: Request, res: Response): Promise<void> => {
-  const usuarioId = (req as any).user?.id;
+export async function restarCantidadCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
   const autorizado = await verificarVerificado(usuarioId);
   if (!autorizado) {
-    res.status(403).json({ error: 'No tenés permisos para realizar esta acción.' });
-    return;
+    return { error: 'No tenés permisos para realizar esta acción.' };
   }
-
-  const { productoId, talle } = req.body;
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
     if (!carrito) {
-      res.status(404).json({ error: 'Carrito no encontrado.' });
       await t.rollback();
-      return;
+      return { error: 'Carrito no encontrado.' };
     }
     const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
     if (productos[clave]) {
@@ -234,13 +197,13 @@ export const restarCantidadCarrito = async (req: Request, res: Response): Promis
       carrito.changed('precioTotal' as any, true);
       await carrito.save({ transaction: t, fields: ['productos', 'precioTotal'] });
       await t.commit();
-      res.status(200).json({ message: 'Cantidad disminuida.' });
+      return { message: 'Cantidad disminuida.' };
     } else {
       await t.rollback();
-      res.status(404).json({ error: 'Producto no encontrado en el carrito.' });
+      return { error: 'Producto no encontrado en el carrito.' };
     }
   } catch (error) {
     await t.rollback();
-    res.status(500).json({ error: 'Error al disminuir cantidad.' });
+    return { error: 'Error al disminuir cantidad.' };
   }
-};
+}
