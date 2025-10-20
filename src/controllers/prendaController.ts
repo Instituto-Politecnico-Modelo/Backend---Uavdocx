@@ -34,6 +34,12 @@ export async function actualizarPrenda(id: number, nombre?: string, precio?: num
   const t = await sequelize.transaction();
   try {
     const updateData: any = {};
+    if (nombre !== undefined) updateData.nombre = nombre;
+    if (precio !== undefined) updateData.precio = precio;
+    if (talles !== undefined) updateData.talles = talles;
+    if (categoria !== undefined) updateData.categoria = categoria;
+    if (imagenPrincipal !== undefined) updateData.imagenPrincipal = imagenPrincipal;
+    if (imagenesSecundarias !== undefined) updateData.imagenesSecundarias = imagenesSecundarias;
     await Prenda.update(updateData, { where: { id }, transaction: t });
     await t.commit();
     return true;

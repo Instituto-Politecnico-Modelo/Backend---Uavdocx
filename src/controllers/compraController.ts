@@ -1,6 +1,7 @@
 import { Compra } from '../models/compra';
 import { Prenda } from '../models/prendas';
 import { restarStockPrenda } from './prendaController';
+import {mailCompraHecha} from './usuarioController';
 
 
 
@@ -32,6 +33,7 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
         envio,
         fechaEntrega
     };
+    await mailCompraHecha(idUsuario);
     return await Compra.create(compraData);
 }
 
