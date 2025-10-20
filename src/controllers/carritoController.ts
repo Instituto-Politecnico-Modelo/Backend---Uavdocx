@@ -36,12 +36,20 @@ export async function agregarAlCarrito(usuarioId: number, productos: any[]): Pro
       const prenda = await Prenda.findByPk(prod.id);
       if (prenda) {
         const precio = prenda.get('precio') as number;
+        const talles = prenda.get('talles') as Record<string, number>;
+        const stock = talles && typeof talles === 'object' ? (talles[prod.talle] ?? 0) : 0;
         const clave = `${prod.id}-${prod.talle}`;
+        const cantidadActual = nuevosProductos[clave]?.cantidad || 0;
+        const cantidadSolicitada = prod.cantidad;
+        if (cantidadActual + cantidadSolicitada > stock) {
+          await t.rollback();
+          return { error: `No hay suficiente stock disponible para la prenda ${prod.id} talle ${prod.talle}. Stock: ${stock}, en carrito: ${cantidadActual}` };
+        }
         if (nuevosProductos[clave]) {
-          nuevosProductos[clave].cantidad += prod.cantidad;
+          nuevosProductos[clave].cantidad += cantidadSolicitada;
           nuevosProductos[clave].precio = precio;
         } else {
-          nuevosProductos[clave] = { id: prod.id, cantidad: prod.cantidad, precio, talle: prod.talle };
+          nuevosProductos[clave] = { id: prod.id, cantidad: cantidadSolicitada, precio, talle: prod.talle };
         }
       }
     }

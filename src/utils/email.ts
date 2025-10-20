@@ -58,3 +58,54 @@ export const enviarCorreoReset = async (email: string, token: string) => {
     console.error('Error al enviar el correo de restablecimiento:', error);
   }
 };
+
+export const enviarCorreoCompraRealizada = async (email: string, detallesCompra: string) => {
+  
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL,
+      pass: process.env.PASS,
+    },
+  });
+  
+  const mailOptions = {
+    from: process.env.MAIL,
+    to: email,
+    subject: 'Compra realizada con éxito',
+    html: `<h2>Detalles de tu compra</h2>
+           <p>${detallesCompra}</p>`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Correo de compra enviado');
+  } catch (error) {
+    console.error('Error al enviar el correo de compra:', error);
+  }
+};
+
+export const enviarCorreoCompraConfirmada = async (email: string, detallesCompra: string) => {
+  
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL,
+      pass: process.env.PASS,
+    },
+  });
+  const mailOptions = {
+    from: process.env.MAIL,
+    to: email,
+    subject: 'Compra confirmada',
+    html: `<h2>Tu compra ha sido confirmada</h2>
+           <p>${detallesCompra}</p>`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Correo de compra confirmada enviado');
+  } catch (error) {
+    console.error('Error al enviar el correo de compra confirmada:', error);
+  }
+};

@@ -5,7 +5,7 @@ import { Usuario } from '../models/usuarios';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
-import { enviarCorreoVerificacion, enviarCorreoReset } from '../utils/email'; 
+import { enviarCorreoVerificacion, enviarCorreoReset, enviarCorreoCompraRealizada, enviarCorreoCompraConfirmada } from '../utils/email'; 
 import { sequelize } from '../config/db'; 
 
 const SECRET_KEY: string = process.env.CLAVE || '';
@@ -16,6 +16,45 @@ export async function obtenerTodosUsuarios() {
     return usuarios;
   } catch (error) {
     throw new Error('Error al obtener usuarios');
+  }
+}
+
+export async function emailDeUsuario(id: number) {
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) throw new Error('Usuario no encontrado');
+    const email = usuario.getDataValue('email');
+    return { email };
+  } catch (error) {
+    throw new Error('Error al obtener el email del usuario');
+  }
+}
+
+export async function mailCompraHecha(id: number) {
+  try{
+    const { email } = await emailDeUsuario(id);
+    if(email){
+      await enviarCorreoCompraRealizada(email, 'Detalles de la compra...');
+      return { mensaje: 'Correo de compra enviada correctamente' };
+    } else {
+      throw new Error('El usuario no tiene un email asociado');
+    }
+  } catch (error) {
+    throw new Error('Error al enviar el correo de compra');
+  }
+}
+
+export async function mailCompraConfirmada(id: number) {
+  try{
+    const { email } = await emailDeUsuario(id);
+    if(email){
+      await enviarCorreoCompraConfirmada(email, 'Detalles de la compra confirmada...');
+      return { mensaje: 'Correo de compra confirmada enviado correctamente' };
+    } else {
+      throw new Error('El usuario no tiene un email asociado');
+    }
+  } catch (error) {
+    throw new Error('Error al enviar el correo de compra confirmada');
   }
 }
 
