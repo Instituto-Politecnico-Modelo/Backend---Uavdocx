@@ -62,28 +62,31 @@ export async function obtenerCompraPorId(idUsuario: number) {
 }
 
 export async function modificarCompra(id: number, estado?: string, fechaEntrega?: Date) {
-    const compra = await Compra.findByPk(id);
-    if (!compra) throw new Error('Compra no encontrada');
-
-    if (estado === 'pagada' && compra.get('estado') !== 'pagada') {
-        let productos = compra.get('productos');
-        let productosArray: any[] = [];
-        if (Array.isArray(productos)) {
-            productosArray = productos;
-        } else if (productos && typeof productos === 'object') {
-            productosArray = Object.values(productos);
+    try {
+        const compra = await Compra.findByPk(id);
+        if (!compra) {
+            return null;
         }
-        for (const prod of productosArray) {
-            const exito = await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
-            if (!exito) {
-                throw new Error(`No hay suficiente stock para la prenda con id ${prod.idPrenda}, talle ${prod.talle}`);
+        if (estado === 'pagada' && compra.get('estado') !== 'pagada') {
+            let productos = compra.get('productos');
+            let productosArray: any[] = [];
+            if (Array.isArray(productos)) {
+                productosArray = productos;
+            } else if (productos && typeof productos === 'object') {
+                productosArray = Object.values(productos);
+            }
+            for (const prod of productosArray) {
+                const exito = await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+                if (!exito) {
+                    throw new Error(`No hay suficiente stock para la prenda con id ${prod.idPrenda}, talle ${prod.talle}`);
+                }
             }
         }
+        await compra.update({ estado, fechaEntrega });
+        return compra;
+    } catch (error: any) {
+        throw new Error(error.message || 'Error al modificar la compra');
     }
-    const updateData: any = {};
-    if (estado) updateData.estado = estado;
-    if (fechaEntrega) updateData.fechaEntrega = fechaEntrega;
-    return await Compra.update(updateData, { where: { id } });
 }
 
 
