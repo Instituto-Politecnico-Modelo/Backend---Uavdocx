@@ -19,6 +19,30 @@ export async function obtenerTodosUsuarios() {
   }
 }
 
+export async function obtenerUsuarios(page?: number, limit?: number) {
+  try{
+    if (page && limit) {
+          const offset = (page - 1) * limit;
+          const { rows: prendas, count: total } = await Usuario.findAndCountAll({
+            limit,
+            offset
+          });
+          return {
+          total,
+            page,
+            limit,
+            data: prendas
+          };
+    } else {
+          const prendas = await Usuario.findAll();
+          return prendas;
+        }
+  } catch (error) {
+      throw new Error('Error al obtener las prendas');
+    }
+}
+
+
 export async function emailDeUsuario(id: number) {
   try {
     const usuario = await Usuario.findByPk(id);

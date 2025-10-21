@@ -23,9 +23,11 @@ router.post('/crearReclamo', verificarToken, async (req, res) => {
         res.status(500).json({ error: error.message || 'Error al crear el reclamo' });
     }
 });
-router.get('/', verificarToken, async (req, res) => {
+router.get('/', verificarToken, soloAdmin, async (req, res) => {
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     try {
-        const reclamos = await obtenerReclamos();
+        const reclamos = await obtenerReclamos(page, limit);
         res.json(reclamos);
     } catch (error: any) {
         res.status(500).json({ error: error.message || 'Error al obtener los reclamos' });
