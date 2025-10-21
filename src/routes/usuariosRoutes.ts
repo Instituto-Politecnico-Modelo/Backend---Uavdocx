@@ -9,7 +9,8 @@ import {
   obtenerTodosUsuarios,
   cambiarEstadoAdministrador,
   cambiarEstadoVerificado,
-  eliminarUsuario
+  eliminarUsuario,
+  obtenerUsuarios
 } from '../controllers/usuarioController';
 
 import { verificarToken, soloAdmin } from '../middleware/usuarios';
@@ -80,9 +81,11 @@ router.get('/admin/:id', async (req, res) => {
   }
 });
 
-router.get('/todos', verificarToken, async (req, res) => {
+router.get('/todos', verificarToken, soloAdmin, async (req, res) => {
+  const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
   try {
-    const usuarios = await obtenerTodosUsuarios();
+    const usuarios = await obtenerUsuarios(page, limit);
     res.status(200).json(usuarios);
   } catch (error: any) {
     res.status(500).json({ mensaje: error.message || 'Error al obtener usuarios' });

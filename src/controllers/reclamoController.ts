@@ -10,13 +10,27 @@ export async function crearReclamo(idUsuario: number, tipo: string, descripcion:
 	}
 }
 
-export async function obtenerReclamos() {
-	try {
-		const reclamos = await Reclamo.findAll();
-		return reclamos;
-	} catch (error: any) {
-		throw new Error(error.message || 'Error al obtener los reclamos');
-	}
+export async function obtenerReclamos(page?: number, limit?: number) {
+	try{
+		if (page && limit) {
+			  const offset = (page - 1) * limit;
+			  const { rows: prendas, count: total } = await Reclamo.findAndCountAll({
+				limit,
+				offset
+			  });
+			  return {
+			  total,
+				page,
+				limit,
+				data: prendas
+			  };
+		} else {
+			  const prendas = await Reclamo.findAll();
+			  return prendas;
+			}
+	  } catch (error) {
+		  throw new Error('Error al obtener las prendas');
+		}
 }
 
 export async function obtenerReclamoPorId(id: number) {
@@ -42,7 +56,7 @@ export async function modificarReclamo(id: number, tipo?: string, descripcion?: 
 	} catch (error: any) {
 		throw new Error(error.message || 'Error al modificar el reclamo');
 	}
-}
+} 
 
 export async function eliminarReclamo(id: number, idUsuarioSolicitante: number, rol: string) {
 	try {
