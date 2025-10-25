@@ -11,12 +11,7 @@ export async function talleDisponiblePorPrenda(id: number, talle: string, cantid
   return { disponible: stockActual !== null && stockActual >= cantidad, stockActual };
 }
 
-export async function verificarVerificado(usuarioId: number): Promise<boolean> {
-  const usuario = await Usuario.findByPk(usuarioId);
-  if (!usuario) return false;
-  const { verificado } = usuario.get();
-  return verificado === true;
-}
+
 
 export async function crearPrenda(nombre: string, precio: number, talles: any, categoria: string, imagenPrincipal: string, imagenesSecundarias?: any) {
   const t = await sequelize.transaction();
@@ -155,8 +150,23 @@ export async function restarStockPrenda(id: number, talle: string, cantidad: num
   const prenda = await Prenda.findByPk(id);
   if (!prenda) return false;
   const talles = prenda.get('talles') as { [key: string]: number };
-  if (!(talle in talles) || talles[talle] < cantidad) return false;
-  talles[talle] -= cantidad;
-  await prenda.update({ talles });
+  if (!(talle in talles)) return false;
+  if (talles[talle] <= 0) return true; 
+  if (talles[talle] < cantidad) {
+    talles[talle] = 0;
+  } else {
+    talles[talle] -= cantidad;
+  }
+  await Prenda.update({ talles }, { where: { id } });
+  return true;
+}
+
+export async function sumarStockPrenda(id: number, talle: string, cantidad: number): Promise<boolean> {
+  const prenda = await Prenda.findByPk(id);
+  if (!prenda) return false;
+  const talles = prenda.get('talles') as { [key: string]: number };
+  if (!(talle in talles)) return false;
+  talles[talle] += cantidad;
+  await Prenda.update({ talles }, { where: { id } });
   return true;
 }
