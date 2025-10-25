@@ -1,6 +1,6 @@
 import { Compra } from '../models/compra';
 import { Prenda } from '../models/prendas';
-import { restarStockPrenda } from './prendaController';
+import { restarStockPrenda, sumarStockPrenda } from './prendaController';
 import {mailCompraHecha} from './usuarioController';
 
 
@@ -20,6 +20,7 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             };
         })
     );
+    await restarStock(productos);
     const compraData = {
         productos: productosConNombre,
         idUsuario,
@@ -40,6 +41,30 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
 export async function obtenerCompras() {
     return await Compra.findAll();
 }
+
+export async function obtenerComprasPaginadas(page?: number, limit?: number) {
+    try {
+        if (page && limit) {
+            const offset = (page - 1) * limit;
+            const { rows: compras, count: total } = await Compra.findAndCountAll({
+                limit,
+                offset
+            });
+            return {
+                total,
+                page,
+                limit,
+                data: compras
+            };
+        } else {
+            const compras = await Compra.findAll();
+            return compras;
+        }
+    } catch (error) {
+        throw new Error('Error al obtener las compras');
+    }
+}
+
 
 export async function obtenerCompraPorId(idUsuario: number) {
     const compras = await Compra.findAll({ where: { idUsuario } });
@@ -65,28 +90,49 @@ export async function modificarCompra(id: number, estado?: string, fechaEntrega?
     try {
         const compra = await Compra.findByPk(id);
         if (!compra) {
-            return null;
+            throw new Error('Compra no encontrada');
         }
-        if (estado === 'pagada' && compra.get('estado') !== 'pagada') {
-            let productos = compra.get('productos');
-            let productosArray: any[] = [];
-            if (Array.isArray(productos)) {
-                productosArray = productos;
-            } else if (productos && typeof productos === 'object') {
-                productosArray = Object.values(productos);
-            }
-            for (const prod of productosArray) {
-                const exito = await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
-                if (!exito) {
-                    throw new Error(`No hay suficiente stock para la prenda con id ${prod.idPrenda}, talle ${prod.talle}`);
-                }
-            }
+        const estadoActual = compra.get('estado');
+        if ((estadoActual === 'pendiente' || estadoActual === 'pagada') && estado === 'cancelada') {
+            await Compra.update({ estado, fechaEntrega }, { where: { id } });
+            const productos = compra.get('productos') as any[];
+            await sumarStock(productos);
+        } else {
+            await Compra.update({ estado, fechaEntrega }, { where: { id } });
         }
-        await compra.update({ estado, fechaEntrega });
-        return compra;
+        const compraActualizada = await Compra.findByPk(id);
+        return compraActualizada;
     } catch (error: any) {
         throw new Error(error.message || 'Error al modificar la compra');
     }
 }
 
 
+export async function restarStock(productos: any[]) {
+    for (const prod of productos) {
+        await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+    }
+}  
+
+export async function sumarStock(productos: any[]) {
+    for (const prod of productos) {
+        await sumarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+    }
+}
+
+export async function cancelarComprasPendientesAntiguas() {
+    const ahora = new Date();
+    const compras = await Compra.findAll({
+        where: {
+            estado: 'pendiente',
+            createdAt: {
+                [require('sequelize').Op.lt]: new Date(ahora.getTime() - 60 * 60 * 1000)
+            }
+        }
+    });
+    for (const compra of compras) {
+        const id = compra.get('id') as number;
+        await modificarCompra(id, 'cancelada');
+    }
+    return compras.length;
+}

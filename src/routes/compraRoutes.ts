@@ -47,13 +47,11 @@ router.post('/', async (req, res) => {
 
 
 router.get('/', verificarToken, soloAdmin, async (req, res) => {
+	const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+	const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
 	try {
-		const compras = await compraController.obtenerCompras();
-		if (Array.isArray(compras)) {
-			res.status(200).json(compras);
-		} else {
-			res.status(500).json({ error: 'Error al obtener las compras' });
-		}
+		const compras = await compraController.obtenerComprasPaginadas(page, limit);
+		res.status(200).json(compras);
 	} catch (error: any) {
 		res.status(500).json({ error: error.message || 'Error al obtener las compras' });
 	}
@@ -81,9 +79,9 @@ router.put('/modificar/:id/', verificarToken, soloAdmin, async (req, res) => {
 	if (isNaN(id)) {
 		return res.status(400).json({ error: 'ID inválido' });
 	}
-	const { estado, fechaEntrega } = req.body;
+	const { estadoNuevo } = req.body;
 	try {
-		const result = await compraController.modificarCompra(id, estado, fechaEntrega);
+		const result = await compraController.modificarCompra(id, estadoNuevo);
 		if (result) {
 			res.status(200).json({ message: 'Compra modificada correctamente' });
 		} else {
@@ -93,5 +91,14 @@ router.put('/modificar/:id/', verificarToken, soloAdmin, async (req, res) => {
 		res.status(500).json({ error: error.message || 'Error al modificar la compra' });
 	}
 });
+
+router.post('/cancelar-pendientes-antiguas', verificarToken, soloAdmin, async (req, res) => {
+	try {
+		await compraController.cancelarComprasPendientesAntiguas();
+	} catch (error: any) {
+		res.status(500).json({ error: error.message || 'Error al cancelar compras pendientes antiguas.' });
+	}
+});
+
 
 export default router;
