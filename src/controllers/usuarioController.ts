@@ -83,7 +83,7 @@ export async function mailCompraConfirmada(id: number) {
 }
 
 export async function registrarUsuario(usuario: string, email: string, contrasenia: string) {
-  if (!usuario || !email || !contrasenia) throw new Error('Faltan datos back');
+  if (!usuario || !email || !contrasenia) throw new Error('Faltan datos');
   if (!validator.isEmail(email)) throw new Error('Email inválido');
   const t = await sequelize.transaction();
   try {
