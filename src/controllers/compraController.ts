@@ -1,7 +1,10 @@
 import { Compra } from '../models/compra';
 import { Prenda } from '../models/prendas';
 import { restarStockPrenda, sumarStockPrenda } from './prendaController';
-import {mailCompraHecha} from './usuarioController';
+import { mailCompraHecha, mailCompraConfirmada } from './usuarioController';
+import { sequelize } from '../config/db';
+import { Usuario } from '../models/usuarios';
+
 
 
 
@@ -9,34 +12,46 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
     if (!Array.isArray(productos) || productos.length === 0) {
         throw new Error('La compra debe incluir al menos un producto.');
     }
-    const productosConNombre = await Promise.all(
-        productos.map(async (prod: any) => {
-            const prenda = await Prenda.findByPk(prod.idPrenda);
-            return {
-                idPrenda: prod.idPrenda,
-                nombre: prenda ? prenda.get('nombre') : null,
-                talle: prod.talle,
-                cantidad: prod.cantidad
-            };
-        })
-    );
-    await restarStock(productos);
-    const compraData = {
-        productos: productosConNombre,
-        idUsuario,
-        total,
-        nombre,
-        apellido,
-        direccion,
-        dni,
-        telefono,
-        email,
-        envio,
-        fechaEntrega
-    };
-    await mailCompraHecha(idUsuario);
-    return await Compra.create(compraData);
+    const t = await sequelize.transaction();
+    try {
+        const productosConNombre = await Promise.all(
+            productos.map(async (prod: any) => {
+                const prenda = await Prenda.findByPk(prod.idPrenda, { transaction: t });
+                return {
+                    idPrenda: prod.idPrenda,
+                    nombre: prenda ? prenda.get('nombre') : null,
+                    talle: prod.talle,
+                    cantidad: prod.cantidad
+                };
+            })
+        );
+        for (const prod of productos) {
+            await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+        }
+        const compraData = {
+            productos: productosConNombre,
+            idUsuario,
+            total,
+            nombre,
+            apellido,
+            direccion,
+            dni,
+            telefono,
+            email,
+            envio,
+            fechaEntrega
+        };
+        await mailCompraHecha(idUsuario);
+        const compraCreada = await Compra.create(compraData, { transaction: t });
+        await t.commit();
+        return compraCreada;
+    } catch (error) {
+        await t.rollback();
+        throw error;
+    }
 }
+
+
 
 export async function obtenerCompras() {
     return await Compra.findAll();
@@ -99,6 +114,9 @@ export async function modificarCompra(id: number, estado?: string, fechaEntrega?
             await sumarStock(productos);
         } else {
             await Compra.update({ estado, fechaEntrega }, { where: { id } });
+            if (estado === 'pagada') {
+                await mailCompraConfirmada(compra.get('idUsuario') as number);
+            }
         }
         const compraActualizada = await Compra.findByPk(id);
         return compraActualizada;

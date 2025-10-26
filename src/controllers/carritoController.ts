@@ -215,3 +215,29 @@ export async function restarCantidadCarrito(usuarioId: number, productoId: numbe
     return { error: 'Error al disminuir cantidad.' };
   }
 }
+
+export async function verificarStockCarrito(usuarioId: number): Promise<{ disponible: boolean; faltantes?: Array<{ id: number; talle: string; cantidadSolicitada: number; stockActual: number }> }> {
+  const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
+  if (!carrito) return { disponible: false };
+
+  const productos = carrito.get('productos') as { [key: string]: ProductoCarrito };
+  const faltantes: Array<{ id: number; talle: string; cantidadSolicitada: number; stockActual: number }> = [];
+
+  for (const key in productos) {
+    const prod = productos[key];
+    const prenda = await Prenda.findByPk(prod.id);
+    if (!prenda) {
+      faltantes.push({ id: prod.id, talle: prod.talle, cantidadSolicitada: prod.cantidad, stockActual: 0 });
+      continue;
+    }
+    const talles = prenda.get('talles') as Record<string, number>;
+    const stockActual = talles && typeof talles === 'object' ? (talles[prod.talle] ?? 0) : 0;
+    if (prod.cantidad > stockActual) {
+      faltantes.push({ id: prod.id, talle: prod.talle, cantidadSolicitada: prod.cantidad, stockActual });
+    }
+  }
+  if (faltantes.length > 0) {
+    return { disponible: false, faltantes };
+  }
+  return { disponible: true };
+}
