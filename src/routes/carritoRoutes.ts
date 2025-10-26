@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { obtenerCarrito, eliminarProductoCarrito, agregarAlCarrito, sumarCantidadCarrito, restarCantidadCarrito } from '../controllers/carritoController';
+import { obtenerCarrito, eliminarProductoCarrito, agregarAlCarrito, sumarCantidadCarrito, restarCantidadCarrito, verificarStockCarrito } from '../controllers/carritoController';
 import { verificarToken } from '../middleware/usuarios';
 
 
@@ -61,6 +61,16 @@ router.delete('/eliminar', verificarToken, async (req, res) => {
 router.get('', verificarToken, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const result = await obtenerCarrito(usuarioId);
+	if ('error' in result) {
+		res.status(400).json(result);
+	} else {
+		res.status(200).json(result);
+	}
+});
+
+router.get('/verificar-stock', verificarToken, async (req, res) => {
+	const usuarioId = (req as any).user?.id;
+	const result = await verificarStockCarrito(usuarioId);
 	if ('error' in result) {
 		res.status(400).json(result);
 	} else {
