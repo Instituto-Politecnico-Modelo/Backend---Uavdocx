@@ -10,6 +10,8 @@ export async function crearReclamo(idUsuario: number, tipo: string, descripcion:
 	}
 }
 
+
+
 export async function obtenerReclamos(page?: number, limit?: number) {
 	try{
 		if (page && limit) {
