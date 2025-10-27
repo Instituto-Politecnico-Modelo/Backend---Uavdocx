@@ -86,10 +86,12 @@ export async function registrarUsuario(usuario: string, email: string, contrasen
   if (!usuario || !email || !contrasenia) throw new Error('Faltan datos');
   if (!validator.isEmail(email)) throw new Error('Email inválido');
   const t = await sequelize.transaction();
+  let rolledBack = false;
   try {
     const usuarioExistente = await Usuario.findOne({ where: { usuario }, transaction: t, lock: t.LOCK.UPDATE });
     if (usuarioExistente) {
       await t.rollback();
+      rolledBack = true;
       throw new Error('El usuario ya existe');
     }
     const saltRounds = 10;
@@ -100,7 +102,9 @@ export async function registrarUsuario(usuario: string, email: string, contrasen
     await t.commit();
     return { mensaje: 'Usuario registrado. Revisa tu correo para confirmar tu cuenta.' };
   } catch (error: any) {
-    await t.rollback();
+    if (!rolledBack) {
+      await t.rollback();
+    }
     throw new Error(error.errors?.[0]?.message || error.message || 'Error al registrar usuario');
   }
 }
