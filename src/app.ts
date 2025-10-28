@@ -29,6 +29,8 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
+
+
 sequelize.authenticate()
   .then(() => console.log('Conectado a MySQL'))
   .catch(error => console.error('Error de conexión:', error));

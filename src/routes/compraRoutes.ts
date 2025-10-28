@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import * as compraController from '../controllers/compraController';
 import { verificarToken, soloAdmin } from '../middleware/usuarios';
+import axios from 'axios';
 
 const router = Router();
 
@@ -41,6 +42,26 @@ router.post('/', async (req, res) => {
 	} catch (error: any) {
 		res.status(400).json({ error: error.message || 'Error al crear la compra' });
 	}
+});
+
+router.get('/preference/:id', async (req, res) => {
+    const preferenceId = req.params.id;
+ 
+    try {
+        const response = await axios.get(
+            `https://api.mercadopago.com/v1/payments/search?preference_id=${preferenceId}`,
+            {
+                headers: {
+                    Authorization: `APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519` 
+                }
+            }
+        );
+        console.log('Datos recibidos de MercadoPago:', response.data); 
+		res.json(response.data);
+    } catch (error) {
+        console.error('Error al obtener los detalles de la preferencia:', error);
+        res.status(500).json({ message: 'Error al obtener los detalles de la preferencia' });
+    }
 });
 
 

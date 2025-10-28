@@ -14,7 +14,7 @@
             ],
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "start:debug"],
-            "program": "${workspaceFolder}/src/Main.ts",
+            "program": "${workspaceFolder}/src/app.ts",
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
@@ -25,7 +25,7 @@
           "request": "launch",
           "name": "Debug with Nodemon",
           "runtimeExecutable": "nodemon",
-          "program": "${workspaceFolder}/src/Main.ts",
+          "program": "${workspaceFolder}/src/app.ts",
           "restart": true,
           "console": "integratedTerminal",
           "internalConsoleOptions": "neverOpen"
