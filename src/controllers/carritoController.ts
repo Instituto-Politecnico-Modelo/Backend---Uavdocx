@@ -7,23 +7,13 @@ import { Prenda } from '../models/prendas';
 
 
 
-export async function verificarVerificado(usuarioId: number): Promise<boolean> {
-  const usuario = await Usuario.findByPk(usuarioId);
-  if (!usuario) return false;
-
-  const { verificado } = usuario.get();
-  return verificado === true;
-}
 
 type ProductoCarrito = { id: number; cantidad: number; precio: number; talle: string };
 
 
 
 export async function agregarAlCarrito(usuarioId: number, productos: any[]): Promise<{ message: string } | { error: string }> {
-  const autorizado = await verificarVerificado(usuarioId);
-  if (!autorizado) {
-    return { error: 'No tenés permisos para realizar esta acción.' };
-  }
+  
   const t = await sequelize.transaction();
   try {
     let carrito = await Carrito.findOne({ where: { idUsuario: usuarioId }, transaction: t });
@@ -76,10 +66,6 @@ export async function agregarAlCarrito(usuarioId: number, productos: any[]): Pro
 }
 
 export async function obtenerCarrito(usuarioId: number): Promise<{ productos: any[]; precioTotal: number } | { error: string }> {
-  const autorizado = await verificarVerificado(usuarioId);
-  if (!autorizado) {
-    return { error: 'No tenés permisos para obtener el carrito.' };
-  }
   try {
     let carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
     if (!carrito) {
@@ -100,10 +86,6 @@ export async function obtenerCarrito(usuarioId: number): Promise<{ productos: an
 
 
 export async function eliminarProductoCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
-  const autorizado = await verificarVerificado(usuarioId);
-  if (!autorizado) {
-    return { error: 'No tenés permisos para realizar esta acción.' };
-  }
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
@@ -138,10 +120,6 @@ export async function eliminarProductoCarrito(usuarioId: number, productoId: num
 }
 
 export async function sumarCantidadCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
-  const autorizado = await verificarVerificado(usuarioId);
-  if (!autorizado) {
-    return { error: 'No tenés permisos para realizar esta acción.' };
-  }
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {
@@ -176,10 +154,6 @@ export async function sumarCantidadCarrito(usuarioId: number, productoId: number
 }
 
 export async function restarCantidadCarrito(usuarioId: number, productoId: number, talle: string): Promise<{ message: string } | { error: string }> {
-  const autorizado = await verificarVerificado(usuarioId);
-  if (!autorizado) {
-    return { error: 'No tenés permisos para realizar esta acción.' };
-  }
   const clave = `${productoId}-${talle}`;
   const t = await sequelize.transaction();
   try {

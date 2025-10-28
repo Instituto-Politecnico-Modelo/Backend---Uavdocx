@@ -119,8 +119,9 @@ export async function comprobarUsuario(usuario_ingreso: string, pass_ingreso: st
     if (passBien) {
       const id = usuario.getDataValue('id');
       const admin = usuario.getDataValue('admin');
-      const token = jwt.sign({ id, usuario: usuario_ingreso, admin }, SECRET_KEY, { expiresIn: '8h' });
-      return { mensaje: 'Login correcto', token, id, admin };
+      const verificado = usuario.getDataValue('verificado')
+      const token = jwt.sign({ id, usuario: usuario_ingreso, admin, verificado }, SECRET_KEY, { expiresIn: '8h' });
+      return { mensaje: 'Login correcto', token, id, admin, verificado };
     } else {
       throw new Error('La contraseña es incorrecta');
     }

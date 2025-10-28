@@ -23,6 +23,15 @@ export function verificarToken(req: Request, res: Response, next: NextFunction):
   });
 }
 
+export function soloVerificado(req:Request, res: Response, next: NextFunction): void{
+  const userData = (req as any).user;
+  if (!userData || !userData.verificado) {
+    res.status(403).json({ message: 'Solo verificados pueden realizar esta acción' });
+    return;
+  }
+  next();
+}
+
 export function soloAdmin(req: Request, res: Response, next: NextFunction): void {
   const userData = (req as any).user;
   if (!userData || !userData.admin) {
@@ -31,3 +40,4 @@ export function soloAdmin(req: Request, res: Response, next: NextFunction): void
   }
   next();
 }
+

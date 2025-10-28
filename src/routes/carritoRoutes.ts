@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { obtenerCarrito, eliminarProductoCarrito, agregarAlCarrito, sumarCantidadCarrito, restarCantidadCarrito, verificarStockCarrito } from '../controllers/carritoController';
-import { verificarToken } from '../middleware/usuarios';
+import { verificarToken, soloVerificado } from '../middleware/usuarios';
 
 
 const router = Router();
@@ -10,7 +10,7 @@ const router = Router();
 
 
 
-router.post('/sumar', verificarToken, async (req, res) => {
+router.post('/sumar', verificarToken, soloVerificado, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const { productoId, talle } = req.body;
 	const result = await sumarCantidadCarrito(usuarioId, productoId, talle);
@@ -22,7 +22,7 @@ router.post('/sumar', verificarToken, async (req, res) => {
 });
 
 
-router.post('/restar', verificarToken, async (req, res) => {
+router.post('/restar', verificarToken, soloVerificado, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const { productoId, talle } = req.body;
 	const result = await restarCantidadCarrito(usuarioId, productoId, talle);
@@ -34,7 +34,7 @@ router.post('/restar', verificarToken, async (req, res) => {
 });
 
 
-router.post('/agregar', verificarToken, async (req, res) => {
+router.post('/agregar', verificarToken, soloVerificado, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const { productos } = req.body;
 	const result = await agregarAlCarrito(usuarioId, productos);
@@ -46,7 +46,7 @@ router.post('/agregar', verificarToken, async (req, res) => {
 });
 
 
-router.delete('/eliminar', verificarToken, async (req, res) => {
+router.delete('/eliminar', verificarToken, soloVerificado, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const { productoId, talle } = req.body;
 	const result = await eliminarProductoCarrito(usuarioId, productoId, talle);
@@ -58,7 +58,7 @@ router.delete('/eliminar', verificarToken, async (req, res) => {
 });
 
 
-router.get('', verificarToken, async (req, res) => {
+router.get('', verificarToken, soloVerificado, async (req, res) => {
 	const usuarioId = (req as any).user?.id;
 	const result = await obtenerCarrito(usuarioId);
 	if ('error' in result) {
