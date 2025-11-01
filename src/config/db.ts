@@ -40,6 +40,7 @@ async function ensureDatabaseExists() {
         user: DB_USER,
         password: DB_PASSWORD,
       });
+      
       await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``);
       await connection.end();
       const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
