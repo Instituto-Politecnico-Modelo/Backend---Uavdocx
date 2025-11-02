@@ -1,7 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { sequelize } from './config/db';
+import { sequelize, sequelizePromise } from './config/db';
+import { defineUsuarioModel } from './models/usuarios';
+import { defineCarritoModel } from './models/carrito';
+import { definePrendaModel } from './models/prendas';
+import { defineCompraModel } from './models/compra';
+import { defineOpinionModel } from './models/opinion';
+import { defineReclamoModel } from './models/reclamo';
+
+export let Usuario: any, Carrito: any, Prenda: any, Compra: any, Opinion: any, Reclamo: any;
+
+sequelizePromise.then((s) => {
+  Usuario = defineUsuarioModel(s);
+  Carrito = defineCarritoModel(s);
+  Prenda = definePrendaModel(s);
+  Compra = defineCompraModel(s);
+  Opinion = defineOpinionModel(s);
+  Reclamo = defineReclamoModel(s);
+});
 import usuariosRoutes from './routes/usuariosRoutes';
 import prendaRoutes from './routes/prendaRoutes';  
 import carritoRoutes from './routes/carritoRoutes';  
@@ -46,7 +63,6 @@ sequelize.sync({ alter: true })
 
 
   import { MercadoPagoConfig, Preference } from 'mercadopago';
-  import { Carrito } from './models/carrito';
 
   const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
 

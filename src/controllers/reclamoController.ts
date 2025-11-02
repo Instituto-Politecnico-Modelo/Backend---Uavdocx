@@ -1,4 +1,4 @@
-import { Reclamo } from '../models/reclamo';
+import { Reclamo } from '../app';
 import { Request, Response, RequestHandler } from 'express';
 
 export async function crearReclamo(idUsuario: number, tipo: string, descripcion: string) {

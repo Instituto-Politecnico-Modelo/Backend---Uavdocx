@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { sequelize } from '../config/db';
-import { Usuario } from '../models/usuarios'; 
-import { Carrito } from '../models/carrito'; 
-import { Prenda } from '../models/prendas'; 
+import { Usuario, Carrito, Prenda } from '../app';
 
 
 
