@@ -58,3 +58,8 @@ async function ensureDatabaseExists() {
 }
 
 export const sequelizePromise = ensureDatabaseExists();
+export let sequelize: Sequelize;
+
+sequelizePromise.then((s) => {
+  sequelize = s;
+});
