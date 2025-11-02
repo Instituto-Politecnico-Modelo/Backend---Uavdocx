@@ -1,7 +1,6 @@
 
 import { Router } from 'express';
 import * as opinionController from '../controllers/opinionController';
-import { Opinion } from '../models/opinion';
 import { verificarToken } from '../middleware/usuarios';
 import { existeOpinionParaCompra } from '../controllers/opinionController';
 
