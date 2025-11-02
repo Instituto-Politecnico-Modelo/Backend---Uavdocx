@@ -1,50 +1,43 @@
-import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db';
-import { Compra } from './compra';
-import { Usuario } from './usuarios';
+import { DataTypes, Sequelize } from 'sequelize';
 
-export const Opinion = sequelize.define('Opiniones', {
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    idUsuario: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Usuario,
-            key: 'id',
+export function defineOpinionModel(sequelize: Sequelize) {
+    return sequelize.define('Opiniones', {
+        id: {
+            type: DataTypes.INTEGER,
+            autoIncrement: true,
+            primaryKey: true,
         },
-    },
-    idCompra: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Compra,
-            key: 'id',
+        idUsuario: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            // references: { model: Usuario, key: 'id' }, // Asociaciones se definen después
         },
-    },
-    calificacion: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        validate: {
-            min: 1,
-            max: 5,
+        idCompra: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            // references: { model: Compra, key: 'id' },
         },
-    },
-    comentario: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-    },
-    fecha: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-    },
-    foto: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    }
-});
+        calificacion: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            validate: {
+                min: 1,
+                max: 5,
+            },
+        },
+        comentario: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        fecha: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+        },
+        foto: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        }
+    });
+}
     

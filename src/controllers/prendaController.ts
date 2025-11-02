@@ -1,7 +1,6 @@
-import { Prenda } from '../models/prendas';
 import { sequelize } from '../config/db';
 import { literal, Op } from 'sequelize';
-import { Usuario } from '../models/usuarios';
+import { Compra, Prenda, Usuario } from '../app';
 
 export async function talleDisponiblePorPrenda(id: number, talle: string, cantidad: number): Promise<{disponible: boolean, stockActual: number | null}> {
   const prenda = await Prenda.findByPk(id);
