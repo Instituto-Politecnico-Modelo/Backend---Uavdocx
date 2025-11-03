@@ -1,21 +1,5 @@
 version: '3.8'
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-uavdocx
-    restart: always
-    environment:
-      MYSQL_DATABASE: uavdocx
-      MYSQL_USER: valen
-      MYSQL_PASSWORD: valen3008
-      MYSQL_ROOT_PASSWORD: valen3008
-    ports:
-      - "3306:3306"
-    networks:
-      - uavdocx-net
-    volumes:
-      - mysql_data:/var/lib/mysql
-
   backend:
     build: .
     container_name: backend-uavdocx
@@ -24,15 +8,3 @@ services:
       - .env
     ports:
       - "3000:3000"
-    depends_on:
-      - mysql
-    networks:
-      - uavdocx-net
-
-networks:
-  uavdocx-net:
-    driver: bridge
-
-volumes:
-  mysql_data:
-    driver: local
