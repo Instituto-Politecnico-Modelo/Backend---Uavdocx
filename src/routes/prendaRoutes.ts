@@ -86,16 +86,21 @@ router.post('/filtrar', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
+  console.log('[GET /prendas/:id] Recibido id:', id);
   if (isNaN(id)) {
+    console.log('[GET /prendas/:id] ID inválido:', req.params.id);
     return res.status(400).json({ error: 'ID inválido' });
   }
   try {
     const prenda = await getPrendaPorId(id);
+    console.log('[GET /prendas/:id] Resultado:', prenda);
     if (!prenda) {
+      console.log('[GET /prendas/:id] Prenda no encontrada para id:', id);
       return res.status(404).json({ error: 'Prenda no encontrada' });
     }
     res.status(200).json(prenda);
   } catch (error: any) {
+    console.log('[GET /prendas/:id] Error:', error);
     res.status(500).json({ error: error.message || 'Error al obtener la prenda' });
   }
 });
