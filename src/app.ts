@@ -121,7 +121,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     const compraCreada = await crearCompra(
       Object.values(productos),
       usuarioId,
-      carrito.get('total'),
+      req.body.total,
       req.body.nombre,
       req.body.apellido,
       req.body.direccion,
