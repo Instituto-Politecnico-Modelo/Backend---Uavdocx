@@ -93,7 +93,13 @@ export async function obtenerPrendas(page?: number, limit?: number) {
       };
     } else {
       const prendas = await Prenda.findAll();
-      return prendas;
+      const total = prendas.length;
+      return {
+        total,
+        page: 1,
+        limit: total,
+        data: prendas
+      };
     }
   } catch (error) {
     throw new Error('Error al obtener las prendas');

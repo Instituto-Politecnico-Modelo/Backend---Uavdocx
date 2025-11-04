@@ -40,8 +40,15 @@ import compraRoutes from './routes/compraRoutes';
 import opinionRoutes from './routes/opinionRoutes';
 
 const app = express();
+
 const PORT = process.env.PORT;
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://uavdocx.policloudservices.ipm.edu.ar',
+    'http://localhost:4200'
+  ],
+  credentials: true,
+}));
 app.use(bodyParser.json());
 
 app.use('/opinion', opinionRoutes);
