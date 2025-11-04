@@ -59,7 +59,7 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
-app.post('/webhook/mp', (req, res) => {
+app.post('/webhook/mp', async (req, res) => {
   const mpKey = req.headers['x-signature-key'] || req.query.key;
   const expectedKey = 'd86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480';
   if (mpKey !== expectedKey) {
@@ -67,7 +67,36 @@ app.post('/webhook/mp', (req, res) => {
     return;
   }
   console.log('Webhook MP recibido:', req.body);
-  res.status(200).json({ received: true });
+  try {
+    const body = req.body;
+    const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
+    const topic = body.type || body.topic;
+    if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
+      const preferenceId = body.data && body.data.external_reference ? body.data.external_reference : body.external_reference;
+      if (!preferenceId) {
+        res.status(400).json({ error: 'No se encontró external_reference/preference_id' });
+        return;
+      }
+      const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
+      if (!compra) {
+        res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
+        return;
+      }
+      if (compra.estado === 'pagada') {
+        res.status(200).json({ message: 'Compra ya confirmada' });
+        return;
+      }
+      const { confirmarCompra } = require('./controllers/compraController');
+      await confirmarCompra(compra.id);
+      await compra.update({ payment_id: paymentId });
+      res.status(200).json({ message: 'Compra confirmada y stock actualizado' });
+      return;
+    }
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error('Error en webhook MP:', err);
+    res.status(500).json({ error: 'Error procesando webhook' });
+  }
 });
 
 
