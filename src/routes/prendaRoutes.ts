@@ -24,8 +24,8 @@ router.put('/:id', verificarToken, soloAdmin, async (req, res) => {
   }
   const { nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias } = req.body;
   try {
-    await actualizarPrenda(id, nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias);
-    res.sendStatus(204);
+  await actualizarPrenda(id, nombre, precio, talles, categoria, imagenPrincipal, imagenesSecundarias);
+  res.sendStatus(204);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Error al actualizar la prenda' });
   }
@@ -37,8 +37,8 @@ router.delete('/:id', verificarToken, soloAdmin, async (req, res) => {
     return res.status(400).json({ error: 'ID inválido' });
   }
   try {
-    await eliminarPrenda(id);
-    res.sendStatus(204);
+  await eliminarPrenda(id);
+  res.sendStatus(204);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Error al eliminar la prenda' });
   }
