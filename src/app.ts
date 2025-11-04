@@ -54,20 +54,31 @@ app.use('/usuarios', usuariosRoutes);
 
 app.use('/prendas', prendaRoutes);
 app.use('/carrito', carritoRoutes);
+
 app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
+app.post('/webhook/mp', (req, res) => {
+  const mpKey = req.headers['x-signature-key'] || req.query.key;
+  const expectedKey = 'd86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480';
+  if (mpKey !== expectedKey) {
+    res.status(401).json({ error: 'Clave inválida' });
+    return;
+  }
+  console.log('Webhook MP recibido:', req.body);
+  res.status(200).json({ received: true });
+});
 
 
-// La inicialización y arranque del servidor ahora se hace dentro de sequelizePromise.then
 
 
-  import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-  const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-  app.post('/create-preference', verificarToken, (req, res) => {
+const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
+
+app.post('/create-preference', verificarToken, (req, res) => {
   (async () => {
     try {
       const usuarioId = (req as any).user?.id;
@@ -99,7 +110,6 @@ app.get('/perfil', verificarToken, (req, res) => {
           id: 'envio'
         });
       }
-      
 
       if (items.length === 0) {
         res.status(400).json({ error: 'El carrito está vacío' });
@@ -109,7 +119,9 @@ app.get('/perfil', verificarToken, (req, res) => {
       const preference = new Preference(client);
       const data = await preference.create({
         body: {
-          items
+          items,
+          // Configura la URL de notificación para Mercado Pago
+          notification_url: 'http://uavdocx-backend-2nzhgo-1718e0-186-153-57-93.traefik.me/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480'
         }
       });
       res.status(200).json({
