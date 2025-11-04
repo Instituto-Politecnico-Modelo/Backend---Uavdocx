@@ -118,31 +118,18 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       return;
     }
 
-    const compraCreada = await crearCompra(
-      Object.values(productos),
-      usuarioId,
-      req.body.total,
-      req.body.nombre,
-      req.body.apellido,
-      req.body.direccion,
-      req.body.dni,
-      req.body.telefono,
-      req.body.email,
-      req.body.envio,
-      req.body.fechaEntrega
-    );
-
     const preference = new Preference(client);
     const data = await preference.create({
       body: {
         items,
         notification_url: 'http://uavdocx-backend-2nzhgo-1718e0-186-153-57-93.traefik.me/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
-        external_reference: compraCreada.id 
+        external_reference: JSON.stringify({
+          usuarioId,
+          envio,
+          total: req.body.total
+        })
       }
     });
-
-    
-    await compraCreada.update({ preference_id: data.id });
 
     res.status(200).json({
       preference_id: data.id,
@@ -150,8 +137,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error en /create-preference:', error);
-  res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
+    res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
   }
 });
-    
     
