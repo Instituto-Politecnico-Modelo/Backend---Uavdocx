@@ -1,10 +1,8 @@
-import { Compra } from '../models/compra';
-import { Prenda } from '../models/prendas';
+
 import { restarStockPrenda, sumarStockPrenda } from './prendaController';
 import { mailCompraHecha, mailCompraConfirmada } from './usuarioController';
 import { sequelize } from '../config/db';
-import { Usuario } from '../models/usuarios';
-
+import { Compra, Prenda, Usuario } from '../app';
 
 
 

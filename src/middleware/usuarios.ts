@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Usuario } from '../models/usuarios';
 
 const SECRET_KEY: string = process.env.CLAVE || '';
 

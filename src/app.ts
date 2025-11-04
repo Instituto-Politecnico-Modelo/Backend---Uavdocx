@@ -1,7 +1,36 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { sequelize } from './config/db';
+import { sequelize, sequelizePromise } from './config/db';
+import { defineUsuarioModel } from './models/usuarios';
+import { defineCarritoModel } from './models/carrito';
+import { definePrendaModel } from './models/prendas';
+import { defineCompraModel } from './models/compra';
+import { defineOpinionModel } from './models/opinion';
+import { defineReclamoModel } from './models/reclamo';
+
+export let Usuario: any, Carrito: any, Prenda: any, Compra: any, Opinion: any, Reclamo: any;
+
+sequelizePromise.then(async (sequelize) => {
+  Usuario = defineUsuarioModel(sequelize);
+  Carrito = defineCarritoModel(sequelize);
+  Prenda = definePrendaModel(sequelize);
+  Compra = defineCompraModel(sequelize);
+  Opinion = defineOpinionModel(sequelize);
+  Reclamo = defineReclamoModel(sequelize);
+
+  try {
+    await sequelize.authenticate();
+    console.log('Conectado a MySQL');
+    await sequelize.sync({ alter: true });
+    console.log('Base de datos sincronizada');
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Error de conexión o sincronización:', error);
+  }
+});
 import usuariosRoutes from './routes/usuariosRoutes';
 import prendaRoutes from './routes/prendaRoutes';  
 import carritoRoutes from './routes/carritoRoutes';  
@@ -31,22 +60,10 @@ app.get('/perfil', verificarToken, (req, res) => {
 
 
 
-sequelize.authenticate()
-  .then(() => console.log('Conectado a MySQL'))
-  .catch(error => console.error('Error de conexión:', error));
-
-sequelize.sync({ alter: true })  
-  .then(() => {
-    console.log('Base de datos sincronizada');
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    });
-  })
-  .catch(err => console.error('Error al sincronizar la base de datos:', err));
+// La inicialización y arranque del servidor ahora se hace dentro de sequelizePromise.then
 
 
   import { MercadoPagoConfig, Preference } from 'mercadopago';
-  import { Carrito } from './models/carrito';
 
   const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
 

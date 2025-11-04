@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    container_name: backend-uavdocx
+    restart: always
+    env_file:
+      - .env
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      PORT: ${PORT}
+      CLAVE: ${CLAVE}
+      MAIL: ${MAIL}
+      PASS: ${PASS}
+    ports:
+      - "3000:3000"
