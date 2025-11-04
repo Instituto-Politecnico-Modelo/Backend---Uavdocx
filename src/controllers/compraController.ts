@@ -1,3 +1,9 @@
+export async function asociarPaymentId(preference_id: string, payment_id: string) {
+    const compra = await Compra.findOne({ where: { preference_id } });
+    if (!compra) throw new Error('Compra no encontrada para ese preference_id');
+    await compra.update({ payment_id });
+    return compra;
+}
 
 import { restarStockPrenda, sumarStockPrenda } from './prendaController';
 import { mailCompraHecha, mailCompraConfirmada } from './usuarioController';
@@ -23,9 +29,6 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
                 };
             })
         );
-        for (const prod of productos) {
-            await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
-        }
         const compraData = {
             productos: productosConNombre,
             idUsuario,
@@ -37,12 +40,37 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             telefono,
             email,
             envio,
-            fechaEntrega
+            fechaEntrega,
+            estado: 'pendiente'
         };
         await mailCompraHecha(idUsuario);
         const compraCreada = await Compra.create(compraData, { transaction: t });
         await t.commit();
         return compraCreada;
+    } catch (error) {
+        await t.rollback();
+        throw error;
+    }
+}
+
+export async function confirmarCompra(idCompra: number) {
+    const t = await sequelize.transaction();
+    try {
+        const compra = await Compra.findByPk(idCompra, { transaction: t });
+        if (!compra) {
+            throw new Error('Compra no encontrada');
+        }
+        if (compra.get('estado') === 'pagada') {
+            throw new Error('La compra ya está confirmada');
+        }
+        const productos = compra.get('productos') as any[];
+        for (const prod of productos) {
+            await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+        }
+        await compra.update({ estado: 'pagada' }, { transaction: t });
+        await mailCompraConfirmada(compra.get('idUsuario'));
+        await t.commit();
+        return compra;
     } catch (error) {
         await t.rollback();
         throw error;

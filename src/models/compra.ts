@@ -60,6 +60,14 @@ export function defineCompraModel(sequelize: Sequelize) {
         fechaEntrega: {
             type: DataTypes.DATE,
             allowNull: true,
+        },
+        payment_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        preference_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
         }
     });
 }

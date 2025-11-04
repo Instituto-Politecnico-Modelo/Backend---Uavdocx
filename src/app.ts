@@ -75,63 +75,82 @@ app.post('/webhook/mp', (req, res) => {
 
 
 import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { crearCompra } from './controllers/compraController';
 
 const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
 
-app.post('/create-preference', verificarToken, (req, res) => {
-  (async () => {
-    try {
-      const usuarioId = (req as any).user?.id;
-      if (!usuarioId) {
-        res.status(401).json({ error: 'Usuario no autenticado' });
-        return;
-      }
 
-      const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
-      if (!carrito) {
-        res.status(404).json({ error: 'Carrito no encontrado' });
-        return;
-      }
 
-      const productos = (carrito.get('productos') || {});
-      const items = Object.values(productos).map((prod: any) => ({
-        title: prod.nombre || `Producto ${prod.id}`,
-        quantity: prod.cantidad,
-        unit_price: prod.precio,
-        id: String(prod.id),
-      }));
-
-      const envio = req.body.envio;
-      if (envio && typeof envio === 'number' && envio > 0) {
-        items.push({
-          title: 'Envío',
-          quantity: 1,
-          unit_price: envio,
-          id: 'envio'
-        });
-      }
-
-      if (items.length === 0) {
-        res.status(400).json({ error: 'El carrito está vacío' });
-        return;
-      }
-
-      const preference = new Preference(client);
-      const data = await preference.create({
-        body: {
-          items,
-          // Configura la URL de notificación para Mercado Pago
-          notification_url: 'http://uavdocx-backend-2nzhgo-1718e0-186-153-57-93.traefik.me/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480'
-        }
-      });
-      res.status(200).json({
-        preference_id: data.id,
-        preference_url: data.init_point,
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Error al crear la preferencia' });
+app.post('/create-preference', verificarToken, async (req, res) => {
+  try {
+    const usuarioId = (req as any).user?.id;
+    if (!usuarioId) {
+      res.status(401).json({ error: 'Usuario no autenticado' });
+      return;
     }
-  })();
+
+    const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
+    if (!carrito) {
+      res.status(404).json({ error: 'Carrito no encontrado' });
+      return;
+    }
+
+    const productos = (carrito.get('productos') || {});
+    const items = Object.values(productos).map((prod: any) => ({
+      title: prod.nombre || `Producto ${prod.id}`,
+      quantity: prod.cantidad,
+      unit_price: prod.precio,
+      id: String(prod.id),
+    }));
+
+    const envio = req.body.envio;
+    if (envio && typeof envio === 'number' && envio > 0) {
+      items.push({
+        title: 'Envío',
+        quantity: 1,
+        unit_price: envio,
+        id: 'envio'
+      });
+    }
+
+    if (items.length === 0) {
+      res.status(400).json({ error: 'El carrito está vacío' });
+      return;
+    }
+
+    const compraCreada = await crearCompra(
+      Object.values(productos),
+      usuarioId,
+      carrito.get('total'),
+      req.body.nombre,
+      req.body.apellido,
+      req.body.direccion,
+      req.body.dni,
+      req.body.telefono,
+      req.body.email,
+      req.body.envio,
+      req.body.fechaEntrega
+    );
+
+    const preference = new Preference(client);
+    const data = await preference.create({
+      body: {
+        items,
+        notification_url: 'http://uavdocx-backend-2nzhgo-1718e0-186-153-57-93.traefik.me/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
+        external_reference: compraCreada.id 
+      }
+    });
+
+    
+    await compraCreada.update({ preference_id: data.id });
+
+    res.status(200).json({
+      preference_id: data.id,
+      preference_url: data.init_point,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear la preferencia' });
+  }
 });
     
     
