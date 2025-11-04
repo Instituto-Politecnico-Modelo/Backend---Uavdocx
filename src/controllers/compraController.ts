@@ -29,6 +29,7 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
                 };
             })
         );
+        await restarStock(productosConNombre);
         const compraData = {
             productos: productosConNombre,
             idUsuario,
@@ -43,7 +44,6 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             fechaEntrega,
             estado: 'pendiente'
         };
-        await mailCompraHecha(idUsuario);
         const compraCreada = await Compra.create(compraData, { transaction: t });
         await t.commit();
         return compraCreada;
@@ -52,6 +52,32 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
         throw error;
     }
 }
+
+/*export async function confirmarCompra(idCompra: number) {
+    const t = await sequelize.transaction();
+    try {
+        const compra = await Compra.findByPk(idCompra, { transaction: t });
+        if (!compra) {
+            throw new Error('Compra no encontrada');
+        }
+        if (compra.get('estado') === 'pagada') {
+            throw new Error('La compra ya está confirmada');
+        }
+        const productos = compra.get('productos') as any[];
+        for (const prod of productos) {
+            await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
+        }
+        await compra.update({ estado: 'pagada' }, { transaction: t });
+        await mailCompraConfirmada(compra.get('idUsuario'));
+        await t.commit();
+        return compra;
+    } catch (error) {
+        await t.rollback();
+        throw error;
+    }
+}
+
+/*
 
 export async function confirmarCompra(idCompra: number) {
     const t = await sequelize.transaction();
@@ -76,6 +102,7 @@ export async function confirmarCompra(idCompra: number) {
         throw error;
     }
 }
+*/
 
 
 
@@ -134,15 +161,12 @@ export async function modificarCompra(id: number, estado?: string, fechaEntrega?
             throw new Error('Compra no encontrada');
         }
         const estadoActual = compra.get('estado');
-        if ((estadoActual === 'pendiente' || estadoActual === 'pagada') && estado === 'cancelada') {
+        if (estadoActual !== 'cancelada' && estado === 'cancelada') {
             await Compra.update({ estado, fechaEntrega }, { where: { id } });
             const productos = compra.get('productos') as any[];
             await sumarStock(productos);
         } else {
             await Compra.update({ estado, fechaEntrega }, { where: { id } });
-            if (estado === 'pagada') {
-                await mailCompraConfirmada(compra.get('idUsuario') as number);
-            }
         }
         const compraActualizada = await Compra.findByPk(id);
         return compraActualizada;
@@ -163,7 +187,7 @@ export async function sumarStock(productos: any[]) {
         await sumarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
     }
 }
-
+/*
 export async function cancelarComprasPendientesAntiguas() {
     const ahora = new Date();
     const compras = await Compra.findAll({
@@ -180,3 +204,4 @@ export async function cancelarComprasPendientesAntiguas() {
     }
     return compras.length;
 }
+*/
