@@ -149,7 +149,8 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       preference_url: data.init_point,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear la preferencia' });
+    console.error('Error en /create-preference:', error);
+  res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
   }
 });
     
