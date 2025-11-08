@@ -59,20 +59,47 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
+import axios from 'axios';
+
 app.post('/webhook/mp', async (req, res) => {
-  const mpKey = req.headers['x-signature-key'] || req.query.key;
-  const expectedKey = 'd86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480';
-  if (mpKey !== expectedKey) {
-    res.status(401).json({ error: 'Clave inválida' });
-    return;
-  }
-  console.log('Webhook MP recibido:', req.body);
   try {
     const body = req.body;
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
+    let preferenceId = body.data && body.data.external_reference ? body.data.external_reference : body.external_reference;
+
+    if (!preferenceId && (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
+      try {
+        const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: {
+            Authorization: `Bearer APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519`
+          }
+        });
+        if (mpResponse.data && mpResponse.data.external_reference) {
+          preferenceId = mpResponse.data.external_reference;
+        }
+      } catch (err) {
+        if (err && typeof err === 'object' && err !== null) {
+          const anyErr = err as any;
+          if (anyErr.response && anyErr.response.data) {
+            console.error('Error consultando pago en MP:', anyErr.response.data);
+          } else {
+            console.error('Error consultando pago en MP:', err);
+          }
+        } else {
+          console.error('Error consultando pago en MP:', err);
+        }
+      }
+    }
+
+    console.log('Webhook MP recibido:', {
+      body,
+      paymentId,
+      topic,
+      external_reference: preferenceId
+    });
+
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
-      const preferenceId = body.data && body.data.external_reference ? body.data.external_reference : body.external_reference;
       if (!preferenceId) {
         res.status(400).json({ error: 'No se encontró external_reference/preference_id' });
         return;
