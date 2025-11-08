@@ -45,13 +45,9 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.use('/opinion', opinionRoutes);
-
 app.use('/compras', compraRoutes);
-
 app.use('/reclamos', reclamoRoutes);
-
 app.use('/usuarios', usuariosRoutes);
-
 app.use('/prendas', prendaRoutes);
 app.use('/carrito', carritoRoutes);
 
@@ -66,17 +62,19 @@ app.post('/webhook/mp', async (req, res) => {
     const body = req.body;
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
-    let preferenceId = body.data && body.data.external_reference ? body.data.external_reference : body.external_reference;
+    let preferenceId: string | undefined = undefined;
 
-    if (!preferenceId && (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
+    if ((topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
       try {
         const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
           headers: {
             Authorization: `Bearer APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519`
           }
         });
-        if (mpResponse.data && mpResponse.data.external_reference) {
-          preferenceId = mpResponse.data.external_reference;
+        if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
+          preferenceId = mpResponse.data.order.id;
+        } else if (mpResponse.data && mpResponse.data.id) {
+          preferenceId = mpResponse.data.id;
         }
       } catch (err) {
         if (err && typeof err === 'object' && err !== null) {
@@ -96,12 +94,12 @@ app.post('/webhook/mp', async (req, res) => {
       body,
       paymentId,
       topic,
-      external_reference: preferenceId
+      preference_id: preferenceId
     });
 
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
       if (!preferenceId) {
-        res.status(400).json({ error: 'No se encontró external_reference/preference_id' });
+        res.status(400).json({ error: 'No se encontró preference_id' });
         return;
       }
       const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
@@ -126,16 +124,10 @@ app.post('/webhook/mp', async (req, res) => {
   }
 });
 
-
-
-
-
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { crearCompra } from './controllers/compraController';
 
 const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
-
-
 
 app.post('/create-preference', verificarToken, async (req, res) => {
   try {
@@ -187,6 +179,12 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       }
     });
 
+    // Guardar el preference_id en la compra pendiente de este usuario
+    await Compra.update(
+      { preference_id: data.id },
+      { where: { idUsuario: usuarioId, estado: 'pendiente' } }
+    );
+
     res.status(200).json({
       preference_id: data.id,
       preference_url: data.init_point,
@@ -196,4 +194,3 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
   }
 });
-    
