@@ -62,22 +62,28 @@ export async function confirmarCompra(idCompra: number) {
     try {
         const compra = await Compra.findByPk(idCompra, { transaction: t });
         if (!compra) {
+            console.error('[confirmarCompra] Compra no encontrada:', idCompra);
             throw new Error('Compra no encontrada');
         }
         if (compra.get('estado') === 'pagada') {
+            console.warn('[confirmarCompra] La compra ya está confirmada:', idCompra);
             throw new Error('La compra ya está confirmada');
         }
         const productos = compra.get('productos') as any[];
-        console.log('[confirmarCompra] Confirmando compra y descontando stock:', compra.id);
+        console.log('[confirmarCompra] Confirmando compra y descontando stock:', compra.id, productos);
         for (const prod of productos) {
+            console.log(`[confirmarCompra] Restando stock: prenda ${prod.idPrenda}, talle ${prod.talle}, cantidad ${prod.cantidad}`);
             await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
         }
         await compra.update({ estado: 'pagada' }, { transaction: t });
+        console.log('[confirmarCompra] Estado actualizado a pagada:', compra.id);
         await mailCompraConfirmada(compra.get('idUsuario'));
         await t.commit();
+        console.log('[confirmarCompra] Compra confirmada y commit realizado:', compra.id);
         return compra;
     } catch (error) {
         await t.rollback();
+        console.error('[confirmarCompra] Error:', error);
         throw error;
     }
 }
@@ -156,6 +162,7 @@ export async function modificarCompra(id: number, estado?: string, fechaEntrega?
 
 export async function restarStock(productos: any[]) {
     for (const prod of productos) {
+        console.log(`[restarStock] Restando stock: prenda ${prod.idPrenda}, talle ${prod.talle}, cantidad ${prod.cantidad}`);
         await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
     }
 }  
