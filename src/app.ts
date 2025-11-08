@@ -151,7 +151,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     const data = await preference.create({
       body: {
         items,
-        notification_url: 'http://uavdocx-backend-2nzhgo-1718e0-186-153-57-93.traefik.me/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
+        notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
         external_reference: JSON.stringify({
           usuarioId,
           envio,
