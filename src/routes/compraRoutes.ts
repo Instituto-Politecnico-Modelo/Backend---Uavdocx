@@ -114,7 +114,7 @@ router.put('/modificar/:id/', verificarToken, soloAdmin, async (req, res) => {
 		res.status(500).json({ error: error.message || 'Error al modificar la compra' });
 	}
 });
-
+/*
 router.post('/cancelar-pendientes-antiguas', verificarToken, soloAdmin, async (req, res) => {
 	try {
 		await compraController.cancelarComprasPendientesAntiguas();
@@ -122,6 +122,6 @@ router.post('/cancelar-pendientes-antiguas', verificarToken, soloAdmin, async (r
 		res.status(500).json({ error: error.message || 'Error al cancelar compras pendientes antiguas.' });
 	}
 });
-
+*/
 
 export default router;

@@ -40,6 +40,7 @@ import compraRoutes from './routes/compraRoutes';
 import opinionRoutes from './routes/opinionRoutes';
 
 const app = express();
+
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(bodyParser.json());
