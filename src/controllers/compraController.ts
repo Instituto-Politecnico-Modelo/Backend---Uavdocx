@@ -75,8 +75,9 @@ export async function confirmarCompra(idCompra: number) {
             console.log(`[confirmarCompra] Restando stock: prenda ${prod.idPrenda}, talle ${prod.talle}, cantidad ${prod.cantidad}`);
             await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
         }
-        await compra.update({ estado: 'pagada' }, { transaction: t });
-        console.log('[confirmarCompra] Estado actualizado a pagada:', compra.id);
+    await compra.update({ estado: 'pagada' }, { transaction: t });
+    const compraActualizada = await Compra.findByPk(idCompra, { transaction: t });
+    console.log('[confirmarCompra] Estado actualizado a pagada:', compraActualizada?.estado, compraActualizada?.toJSON());
         await mailCompraConfirmada(compra.get('idUsuario'));
         await t.commit();
         console.log('[confirmarCompra] Compra confirmada y commit realizado:', compra.id);
