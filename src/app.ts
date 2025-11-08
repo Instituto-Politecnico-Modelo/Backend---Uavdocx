@@ -108,8 +108,9 @@ app.post('/webhook/mp', async (req, res) => {
         res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
         return;
       }
+      console.log('Compraaa:', compra.toJSON());
       if (compra.estado === 'pagada') {
-        res.status(200).json({ message: 'Compra ya confirmada' });
+        res.status(200).json({ message: 'Compra confirmadisima' });
         return;
       }
       const { confirmarCompra } = require('./controllers/compraController');

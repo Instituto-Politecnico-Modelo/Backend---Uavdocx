@@ -18,6 +18,7 @@ router.post('/', async (req, res) => {
 		telefono,
 		email,
 		envio,
+		preference_id,
 		fechaEntrega
 	} = req.body;
 	try {
@@ -32,6 +33,7 @@ router.post('/', async (req, res) => {
 			telefono,
 			email,
 			envio,
+			preference_id,
 			fechaEntrega
 		);
 		if (compra && typeof compra.get === 'function' && compra.get('id')) {

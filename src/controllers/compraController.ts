@@ -12,7 +12,7 @@ import { Compra, Prenda, Usuario } from '../app';
 
 
 
-export async function crearCompra(productos: any[], idUsuario: number, total: number, nombre: string, apellido: string, direccion: string, dni: number, telefono: string, email: string, envio: string, fechaEntrega?: Date) {
+export async function crearCompra(productos: any[], idUsuario: number, total: number, nombre: string, apellido: string, direccion: string, dni: number, telefono: string, email: string, envio: string, preference_id: string, fechaEntrega?: Date) {
     if (!Array.isArray(productos) || productos.length === 0) {
         throw new Error('La compra debe incluir al menos un producto.');
     }
@@ -42,8 +42,13 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             email,
             envio,
             fechaEntrega,
-            estado: 'pendiente'
+            estado: 'pendiente',
+            preference_id
         };
+        // Solo crea la compra en estado pendiente, NO descuenta stock ni cambia estado
+        console.log('[crearCompra] Creando compra en estado pendiente, sin descontar stock:', compraData);
+        await mailCompraHecha(idUsuario);
+
         const compraCreada = await Compra.create(compraData, { transaction: t });
         await t.commit();
         return compraCreada;
@@ -90,6 +95,8 @@ export async function confirmarCompra(idCompra: number) {
             throw new Error('La compra ya está confirmada');
         }
         const productos = compra.get('productos') as any[];
+        // Solo aquí se descuenta stock y se cambia a pagada
+        console.log('[confirmarCompra] Confirmando compra y descontando stock:', compra.id);
         for (const prod of productos) {
             await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
         }
