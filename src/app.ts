@@ -8,6 +8,7 @@ import { definePrendaModel } from './models/prendas';
 import { defineCompraModel } from './models/compra';
 import { defineOpinionModel } from './models/opinion';
 import { defineReclamoModel } from './models/reclamo';
+import { confirmarCompra } from './controllers/compraController';
 
 export let Usuario: any, Carrito: any, Prenda: any, Compra: any, Opinion: any, Reclamo: any;
 
@@ -121,7 +122,6 @@ app.post('/webhook/mp', async (req, res) => {
         res.status(200).json({ message: 'Compra confirmadisima' });
         return;
       }
-      const { confirmarCompra } = require('./controllers/compraController');
       await confirmarCompra(compra.id);
       await compra.update({ payment_id: paymentId });
       res.status(200).json({ message: 'Compra confirmada y stock actualizado' });
