@@ -64,6 +64,7 @@ app.post('/webhook/mp', async (req, res) => {
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
     let preferenceId: string | undefined = undefined;
+    let paymentStatus: string | undefined = undefined;
 
     if ((topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
       try {
@@ -77,6 +78,7 @@ app.post('/webhook/mp', async (req, res) => {
         } else if (mpResponse.data && mpResponse.data.id) {
           preferenceId = mpResponse.data.id;
         }
+        paymentStatus = mpResponse.data.status;
       } catch (err) {
         if (err && typeof err === 'object' && err !== null) {
           const anyErr = err as any;
@@ -95,12 +97,18 @@ app.post('/webhook/mp', async (req, res) => {
       body,
       paymentId,
       topic,
-      preference_id: preferenceId
+      preference_id: preferenceId,
+      payment_status: paymentStatus
     });
 
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
       if (!preferenceId) {
         res.status(400).json({ error: 'No se encontró preference_id' });
+        return;
+      }
+      if (paymentStatus !== 'approved') {
+        console.log('Pago recibido pero NO aprobado, no se descuenta stock ni se cambia estado:', paymentStatus);
+        res.status(200).json({ message: 'Pago no aprobado, sin acción' });
         return;
       }
       const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
@@ -181,7 +189,6 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       }
     });
 
-    // Guardar el preference_id en la compra pendiente de este usuario
     await Compra.update(
       { preference_id: data.id },
       { where: { idUsuario: usuarioId, estado: 'pendiente' } }

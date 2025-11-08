@@ -29,7 +29,6 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
                 };
             })
         );
-        await restarStock(productosConNombre);
         const compraData = {
             productos: productosConNombre,
             idUsuario,
@@ -45,7 +44,6 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             estado: 'pendiente',
             preference_id
         };
-        // Solo crea la compra en estado pendiente, NO descuenta stock ni cambia estado
         console.log('[crearCompra] Creando compra en estado pendiente, sin descontar stock:', compraData);
         await mailCompraHecha(idUsuario);
 
@@ -58,31 +56,6 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
     }
 }
 
-/*export async function confirmarCompra(idCompra: number) {
-    const t = await sequelize.transaction();
-    try {
-        const compra = await Compra.findByPk(idCompra, { transaction: t });
-        if (!compra) {
-            throw new Error('Compra no encontrada');
-        }
-        if (compra.get('estado') === 'pagada') {
-            throw new Error('La compra ya está confirmada');
-        }
-        const productos = compra.get('productos') as any[];
-        for (const prod of productos) {
-            await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
-        }
-        await compra.update({ estado: 'pagada' }, { transaction: t });
-        await mailCompraConfirmada(compra.get('idUsuario'));
-        await t.commit();
-        return compra;
-    } catch (error) {
-        await t.rollback();
-        throw error;
-    }
-}
-
-/*
 
 export async function confirmarCompra(idCompra: number) {
     const t = await sequelize.transaction();
@@ -95,7 +68,6 @@ export async function confirmarCompra(idCompra: number) {
             throw new Error('La compra ya está confirmada');
         }
         const productos = compra.get('productos') as any[];
-        // Solo aquí se descuenta stock y se cambia a pagada
         console.log('[confirmarCompra] Confirmando compra y descontando stock:', compra.id);
         for (const prod of productos) {
             await restarStockPrenda(prod.idPrenda, prod.talle, prod.cantidad);
@@ -109,7 +81,6 @@ export async function confirmarCompra(idCompra: number) {
         throw error;
     }
 }
-*/
 
 
 
