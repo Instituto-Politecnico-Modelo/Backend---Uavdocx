@@ -62,6 +62,7 @@ import axios from 'axios';
 app.post('/webhook/mp', async (req, res) => {
   try {
     const body = req.body;
+    console.log('Webhook recibido. Body:', JSON.stringify(body, null, 2));
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
     let preferenceId: string | undefined = undefined;
@@ -94,8 +95,7 @@ app.post('/webhook/mp', async (req, res) => {
       }
     }
 
-    console.log('Webhook MP recibido:', {
-      body,
+    console.log('Datos extraídos del webhook:', {
       paymentId,
       topic,
       preference_id: preferenceId,
@@ -114,10 +114,11 @@ app.post('/webhook/mp', async (req, res) => {
       }
       const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
       if (!compra) {
+        console.log('No se encontró compra para ese preference_id:', preferenceId);
         res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
         return;
       }
-      console.log('Compraaa:', compra.toJSON());
+      console.log('Compra encontrada:', compra.toJSON());
       if (compra.estado === 'pagada') {
         res.status(200).json({ message: 'Compra confirmadisima' });
         return;

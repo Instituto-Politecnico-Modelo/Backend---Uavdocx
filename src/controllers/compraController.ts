@@ -146,7 +146,7 @@ export async function modificarCompra(id: number, estado?: string, fechaEntrega?
             throw new Error('Compra no encontrada');
         }
         const estadoActual = compra.get('estado');
-        if (estadoActual !== 'cancelada' && estado === 'cancelada') {
+        if (estadoActual === 'pagada' && estado === 'cancelada') {
             await Compra.update({ estado, fechaEntrega }, { where: { id } });
             const productos = compra.get('productos') as any[];
             await sumarStock(productos);
