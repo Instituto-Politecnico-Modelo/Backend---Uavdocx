@@ -12,7 +12,7 @@ import { Compra, Prenda, Usuario } from '../app';
 
 
 
-export async function crearCompra(productos: any[], idUsuario: number, total: number, nombre: string, apellido: string, direccion: string, dni: number, telefono: string, email: string, envio: string, preference_id: string, fechaEntrega?: Date) {
+export async function crearCompra(productos: any[], idUsuario: number, total: number, nombre: string, apellido: string, direccion: string, dni: number, telefono: string, email: string, envio: string, preference_id: string, fechaEntrega?: Date, order_id?: string) {
     if (!Array.isArray(productos) || productos.length === 0) {
         throw new Error('La compra debe incluir al menos un producto.');
     }
@@ -42,7 +42,8 @@ export async function crearCompra(productos: any[], idUsuario: number, total: nu
             envio,
             fechaEntrega,
             estado: 'pendiente',
-            preference_id
+            preference_id,
+            order_id: order_id || null
         };
         console.log('[crearCompra] Creando compra en estado pendiente, sin descontar stock:', compraData);
         await mailCompraHecha(idUsuario);

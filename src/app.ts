@@ -61,26 +61,41 @@ import axios from 'axios';
 
 app.post('/webhook/mp', async (req, res) => {
   try {
-    const body = req.body;
-    console.log('Webhook recibido. Body:', JSON.stringify(body, null, 2));
+  const body = req.body;
+  console.log('--- Webhook recibido ---');
+  console.log('Body:', JSON.stringify(body, null, 2));
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
     let preferenceId: string | undefined = undefined;
     let paymentStatus: string | undefined = undefined;
 
+  let orderId: string | undefined = undefined;
+  console.log('Intentando extraer paymentId y topic del body...');
     if ((topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
       try {
+        console.log(`[Webhook] Consultando pago en MercadoPago con paymentId: ${paymentId}`);
         const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
           headers: {
             Authorization: `Bearer APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519`
           }
         });
+        console.log('[Webhook] Respuesta de MercadoPago:', JSON.stringify(mpResponse.data, null, 2));
         if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
-          preferenceId = mpResponse.data.order.id;
-        } else if (mpResponse.data && mpResponse.data.id) {
-          preferenceId = mpResponse.data.id;
+          orderId = String(mpResponse.data.order.id);
+          console.log(`[Webhook] orderId extraído: ${orderId}`);
+        }
+        if (mpResponse.data && mpResponse.data.additional_info && mpResponse.data.additional_info.external_reference) {
+          preferenceId = mpResponse.data.additional_info.external_reference;
+          console.log(`[Webhook] preferenceId extraído de additional_info.external_reference: ${preferenceId}`);
+        } else if (mpResponse.data && mpResponse.data.metadata && mpResponse.data.metadata.preference_id) {
+          preferenceId = mpResponse.data.metadata.preference_id;
+          console.log(`[Webhook] preferenceId extraído de metadata.preference_id: ${preferenceId}`);
+        } else if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
+          preferenceId = String(mpResponse.data.order.id);
+          console.log(`[Webhook] preferenceId fallback de order.id: ${preferenceId}`);
         }
         paymentStatus = mpResponse.data.status;
+        console.log(`[Webhook] paymentStatus extraído: ${paymentStatus}`);
       } catch (err) {
         if (err && typeof err === 'object' && err !== null) {
           const anyErr = err as any;
@@ -95,42 +110,55 @@ app.post('/webhook/mp', async (req, res) => {
       }
     }
 
-    console.log('Datos extraídos del webhook:', {
-      paymentId,
-      topic,
-      preference_id: preferenceId,
-      payment_status: paymentStatus
-    });
+    console.log('--- Datos extraídos del webhook ---');
+    console.log('paymentId:', paymentId);
+    console.log('topic:', topic);
+    console.log('preference_id:', preferenceId);
+    console.log('order_id:', orderId);
+    console.log('payment_status:', paymentStatus);
 
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
-      if (!preferenceId) {
-        res.status(400).json({ error: 'No se encontró preference_id' });
+      if (!orderId && !preferenceId) {
+        console.log('[Webhook] No se encontró order_id ni preference_id para buscar la compra.');
+        res.status(400).json({ error: 'No se encontró order_id ni preference_id' });
         return;
       }
       if (paymentStatus !== 'approved') {
-        console.log('Pago recibido pero NO aprobado, no se descuenta stock ni se cambia estado:', paymentStatus);
+        console.log(`[Webhook] Pago recibido pero NO aprobado (${paymentStatus}), no se descuenta stock ni se cambia estado.`);
         res.status(200).json({ message: 'Pago no aprobado, sin acción' });
         return;
       }
-      const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
+      let compra = null;
+      if (orderId) {
+        console.log(`[Webhook] Buscando compra por order_id: ${orderId}`);
+        compra = await Compra.findOne({ where: { order_id: orderId } });
+      }
+      if (!compra && preferenceId) {
+        console.log(`[Webhook] No se encontró compra por order_id. Buscando por preference_id: ${preferenceId}`);
+        compra = await Compra.findOne({ where: { preference_id: preferenceId } });
+      }
       if (!compra) {
-        console.log('No se encontró compra para ese preference_id:', preferenceId);
-        res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
+        console.log(`[Webhook] No se encontró compra para ese order_id/preference_id:`, orderId, preferenceId);
+        res.status(404).json({ error: 'Compra no encontrada para ese order_id/preference_id' });
         return;
       }
-      console.log('Compra encontrada:', compra.toJSON());
+      console.log('[Webhook] Compra encontrada:', compra.toJSON());
       if (compra.estado === 'pagada') {
+        console.log('[Webhook] La compra ya estaba confirmada/pagada.');
         res.status(200).json({ message: 'Compra confirmadisima' });
         return;
       }
+      console.log('[Webhook] Confirmando compra y actualizando estado...');
       await confirmarCompra(compra.id);
-      await compra.update({ payment_id: paymentId });
+      await compra.update({ payment_id: paymentId, order_id: orderId });
+      console.log('[Webhook] Compra confirmada y stock actualizado.');
       res.status(200).json({ message: 'Compra confirmada y stock actualizado' });
       return;
     }
+    console.log('[Webhook] Webhook recibido de tipo no relevante, sin acción.');
     res.status(200).json({ received: true });
   } catch (err) {
-    console.error('Error en webhook MP:', err);
+    console.error('[Webhook] Error en webhook MP:', err);
     res.status(500).json({ error: 'Error procesando webhook' });
   }
 });

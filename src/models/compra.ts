@@ -68,6 +68,10 @@ export function defineCompraModel(sequelize: Sequelize) {
         preference_id: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        order_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
         }
     });
 }
