@@ -19,7 +19,8 @@ router.post('/', async (req, res) => {
 		email,
 		envio,
 		preference_id,
-		fechaEntrega
+		fechaEntrega,
+		order_id
 	} = req.body;
 	try {
 		const compra = await compraController.crearCompra(
@@ -34,7 +35,8 @@ router.post('/', async (req, res) => {
 			email,
 			envio,
 			preference_id,
-			fechaEntrega
+			fechaEntrega,
+			order_id
 		);
 		if (compra && typeof compra.get === 'function' && compra.get('id')) {
 			res.status(201).json(compra);
