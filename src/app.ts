@@ -1,3 +1,4 @@
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -62,15 +63,18 @@ import axios from 'axios';
 app.post('/webhook/mp', async (req, res) => {
   try {
   const body = req.body;
-  console.log('--- Webhook recibido ---');
-  console.log('Body:', JSON.stringify(body, null, 2));
+  try {
+    const body = req.body;
+    console.log('--- Webhook recibido ---');
+    console.log('Body:', JSON.stringify(body, null, 2));
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
     let preferenceId: string | undefined = undefined;
     let paymentStatus: string | undefined = undefined;
+    let orderId: string | undefined = undefined;
+    let externalReference: string | undefined = undefined;
+    console.log('Intentando extraer paymentId y topic del body...');
 
-  let orderId: string | undefined = undefined;
-  console.log('Intentando extraer paymentId y topic del body...');
     if ((topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
       try {
         console.log(`[Webhook] Consultando pago en MercadoPago con paymentId: ${paymentId}`);
@@ -83,6 +87,10 @@ app.post('/webhook/mp', async (req, res) => {
         if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
           orderId = String(mpResponse.data.order.id);
           console.log(`[Webhook] orderId extraído: ${orderId}`);
+        }
+        if (mpResponse.data && mpResponse.data.external_reference) {
+          externalReference = mpResponse.data.external_reference;
+          console.log(`[Webhook] external_reference extraído: ${externalReference}`);
         }
         if (mpResponse.data && mpResponse.data.additional_info && mpResponse.data.additional_info.external_reference) {
           preferenceId = mpResponse.data.additional_info.external_reference;
@@ -115,12 +123,13 @@ app.post('/webhook/mp', async (req, res) => {
     console.log('topic:', topic);
     console.log('preference_id:', preferenceId);
     console.log('order_id:', orderId);
+    console.log('external_reference:', externalReference);
     console.log('payment_status:', paymentStatus);
 
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
-      if (!orderId && !preferenceId) {
-        console.log('[Webhook] No se encontró order_id ni preference_id para buscar la compra.');
-        res.status(400).json({ error: 'No se encontró order_id ni preference_id' });
+      if (!orderId && !preferenceId && !externalReference) {
+        console.log('[Webhook] No se encontró order_id, preference_id ni external_reference para buscar la compra.');
+        res.status(400).json({ error: 'No se encontró order_id, preference_id ni external_reference' });
         return;
       }
       if (paymentStatus !== 'approved') {
@@ -129,17 +138,21 @@ app.post('/webhook/mp', async (req, res) => {
         return;
       }
       let compra = null;
-      if (orderId) {
-        console.log(`[Webhook] Buscando compra por order_id: ${orderId}`);
+      if (externalReference) {
+        console.log(`[Webhook] Buscando compra por external_reference (preference_id real): ${externalReference}`);
+        compra = await Compra.findOne({ where: { preference_id: externalReference } });
+      }
+      if (!compra && orderId) {
+        console.log(`[Webhook] No se encontró compra por external_reference. Buscando por order_id: ${orderId}`);
         compra = await Compra.findOne({ where: { order_id: orderId } });
       }
       if (!compra && preferenceId) {
-        console.log(`[Webhook] No se encontró compra por order_id. Buscando por preference_id: ${preferenceId}`);
+        console.log(`[Webhook] No se encontró compra por order_id. Buscando por preference_id fallback: ${preferenceId}`);
         compra = await Compra.findOne({ where: { preference_id: preferenceId } });
       }
       if (!compra) {
-        console.log(`[Webhook] No se encontró compra para ese order_id/preference_id:`, orderId, preferenceId);
-        res.status(404).json({ error: 'Compra no encontrada para ese order_id/preference_id' });
+        console.log(`[Webhook] No se encontró compra para external_reference/order_id/preference_id:`, externalReference, orderId, preferenceId);
+        res.status(404).json({ error: 'Compra no encontrada para external_reference/order_id/preference_id' });
         return;
       }
       console.log('[Webhook] Compra encontrada:', compra.toJSON());
@@ -161,10 +174,6 @@ app.post('/webhook/mp', async (req, res) => {
     console.error('[Webhook] Error en webhook MP:', err);
     res.status(500).json({ error: 'Error procesando webhook' });
   }
-});
-
-import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { crearCompra } from './controllers/compraController';
 
 const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
 
@@ -230,5 +239,10 @@ app.post('/create-preference', verificarToken, async (req, res) => {
   } catch (error) {
     console.error('Error en /create-preference:', error);
     res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
+  }
+});
+  } catch (error) {
+    console.error('Error procesando webhook:', error);
+    res.status(500).json({ error: 'Error procesando webhook' });
   }
 });
