@@ -42,6 +42,7 @@ import compraRoutes from './routes/compraRoutes';
 import opinionRoutes from './routes/opinionRoutes';
 
 const app = express();
+const tokenMP = process.env.TOKEN_MP;
 
 const PORT = process.env.PORT;
 app.use(cors());
@@ -76,7 +77,7 @@ app.post('/webhook/mp', async (req, res) => {
       try {
         const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
           headers: {
-            Authorization: `Bearer APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519`
+            Authorization: `Bearer ${tokenMP}`,
           }
         });
         console.log('Respuesta de MercadoPago para paymentId', paymentId, ':', JSON.stringify(mpResponse.data, null, 2));
