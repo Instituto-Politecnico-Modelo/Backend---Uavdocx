@@ -63,8 +63,12 @@ import axios from 'axios';
 app.post('/webhook/mp', async (req, res) => {
   try {
     const body = req.body;
+    console.log('--- Webhook recibido en /webhook/mp ---');
+    console.log('Body recibido:', JSON.stringify(body, null, 2));
     const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
     const topic = body.type || body.topic;
+    console.log('paymentId:', paymentId);
+    console.log('topic:', topic);
     let preferenceId: string | undefined = undefined;
     let paymentStatus: string | undefined = undefined;
 
@@ -75,12 +79,15 @@ app.post('/webhook/mp', async (req, res) => {
             Authorization: `Bearer APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519`
           }
         });
+        console.log('Respuesta de MercadoPago para paymentId', paymentId, ':', JSON.stringify(mpResponse.data, null, 2));
         if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
           preferenceId = mpResponse.data.order.id;
         } else if (mpResponse.data && mpResponse.data.id) {
           preferenceId = mpResponse.data.id;
         }
         paymentStatus = mpResponse.data.status;
+        console.log('preferenceId obtenido:', preferenceId);
+        console.log('paymentStatus obtenido:', paymentStatus);
       } catch (err) {
         if (err && typeof err === 'object' && err !== null) {
           const anyErr = err as any;
@@ -97,27 +104,34 @@ app.post('/webhook/mp', async (req, res) => {
 
     if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
       if (!preferenceId) {
+        console.error('No se encontró preference_id');
         res.status(400).json({ error: 'No se encontró preference_id' });
         return;
       }
       if (paymentStatus !== 'approved') {
+        console.log('Pago no aprobado, sin acción. Estado:', paymentStatus);
         res.status(200).json({ message: 'Pago no aprobado, sin acción' });
         return;
       }
       const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
+      console.log('Compra encontrada para preference_id', preferenceId, ':', compra ? compra.toJSON() : null);
       if (!compra) {
+        console.error('Compra no encontrada para ese preference_id');
         res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
         return;
       }
       if (compra.estado === 'pagada') {
+        console.log('Compra ya confirmada previamente.');
         res.status(200).json({ message: 'Compra confirmadisima' });
         return;
       }
       await confirmarCompra(compra.id);
       await compra.update({ payment_id: paymentId });
+      console.log('Compra confirmada y stock actualizado para compra id:', compra.id);
       res.status(200).json({ message: 'Compra confirmada y stock actualizado' });
       return;
     }
+    console.log('Evento recibido no es de tipo payment. Se responde OK.');
     res.status(200).json({ received: true });
   } catch (err) {
     console.error('Error en webhook MP:', err);
