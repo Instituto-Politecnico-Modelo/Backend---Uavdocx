@@ -64,78 +64,92 @@ import axios from 'axios';
 app.post('/webhook/mp', async (req, res) => {
   try {
     const body = req.body;
-    console.log('--- Webhook recibido en /webhook/mp ---');
-    console.log('Body recibido:', JSON.stringify(body, null, 2));
-    const paymentId = body.data && body.data.id ? body.data.id : body.payment_id || body.id;
+    console.log('--- Webhook recibido ---');
+    console.log('Body:', JSON.stringify(body, null, 2));
+ 
+    const paymentId = body.data?.id || body.payment_id || body.id;
     const topic = body.type || body.topic;
-    console.log('paymentId:', paymentId);
-    console.log('topic:', topic);
-    let preferenceId: string | undefined = undefined;
-    let paymentStatus: string | undefined = undefined;
-
-    if ((topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') && paymentId) {
-      try {
-        const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-          headers: {
-            Authorization: `Bearer ${tokenMP}`,
-          }
-        });
-        console.log('Respuesta de MercadoPago para paymentId', paymentId, ':', JSON.stringify(mpResponse.data, null, 2));
-        if (mpResponse.data && mpResponse.data.order && mpResponse.data.order.id) {
-          preferenceId = mpResponse.data.order.id;
-        } else if (mpResponse.data && mpResponse.data.id) {
-          preferenceId = mpResponse.data.id;
-        }
-        paymentStatus = mpResponse.data.status;
-        console.log('preferenceId obtenido:', preferenceId);
-        console.log('paymentStatus obtenido:', paymentStatus);
-      } catch (err) {
-        if (err && typeof err === 'object' && err !== null) {
-          const anyErr = err as any;
-          if (anyErr.response && anyErr.response.data) {
-            console.error('Error consultando pago en MP:', anyErr.response.data);
-          } else {
-            console.error('Error consultando pago en MP:', err);
-          }
-        } else {
-          console.error('Error consultando pago en MP:', err);
-        }
-      }
-    }
-
-    if (topic === 'payment' || topic === 'payment.created' || topic === 'payment.updated') {
-      if (!preferenceId) {
-        console.error('No se encontró preference_id');
-        res.status(400).json({ error: 'No se encontró preference_id' });
-        return;
-      }
-      if (paymentStatus !== 'approved') {
-        console.log('Pago no aprobado, sin acción. Estado:', paymentStatus);
-        res.status(200).json({ message: 'Pago no aprobado, sin acción' });
-        return;
-      }
-      const compra = await Compra.findOne({ where: { preference_id: preferenceId } });
-      console.log('Compra encontrada para preference_id', preferenceId, ':', compra ? compra.toJSON() : null);
-      if (!compra) {
-        console.error('Compra no encontrada para ese preference_id');
-        res.status(404).json({ error: 'Compra no encontrada para ese preference_id' });
-        return;
-      }
-      if (compra.estado === 'pagada') {
-        console.log('Compra ya confirmada previamente.');
-        res.status(200).json({ message: 'Compra confirmadisima' });
-        return;
-      }
-      await confirmarCompra(compra.id);
-      await compra.update({ payment_id: paymentId });
-      console.log('Compra confirmada y stock actualizado para compra id:', compra.id);
-      res.status(200).json({ message: 'Compra confirmada y stock actualizado' });
+ 
+    console.log('Payment ID:', paymentId);
+    console.log('Topic:', topic);
+ 
+    if (!['payment', 'payment.created', 'payment.updated'].includes(topic)) {
+      console.log('Evento no es de tipo payment, se ignora');
+      res.status(200).json({ received: true });
       return;
     }
-    console.log('Evento recibido no es de tipo payment. Se responde OK.');
-    res.status(200).json({ received: true });
-  } catch (err) {
-    console.error('Error en webhook MP:', err);
+ 
+    if (!paymentId) {
+      console.error('No se encontró payment ID en el webhook');
+      res.status(400).json({ error: 'Payment ID no encontrado' });
+      return;
+    }
+ 
+    const paymentData = await Carrito.get({ id: paymentId });
+    
+    console.log('Datos del pago:', {
+      id: paymentData.id,
+      status: paymentData.status,
+      externalReference: paymentData.external_reference
+    });
+ 
+    const externalReference = paymentData.external_reference;
+    const paymentStatus = paymentData.status;
+ 
+    if (!externalReference) {
+      console.error('No se encontró external_reference en el pago');
+      res.status(400).json({ error: 'External reference no encontrado' });
+      return;
+    }
+ 
+    const compra = await Compra.findById(externalReference);
+ 
+    if (!compra) {
+      console.error('compra no encontrada para ID:', externalReference);
+      res.status(404).json({ error: 'compra no encontrada' });
+      return;
+    }
+ 
+    console.log('compra encontrada:', {
+      id: compra.id,
+      estado: compra.estado
+    });
+ 
+    if (paymentStatus !== 'approved') {
+      console.log('Pago no aprobado. Estado:', paymentStatus);
+      res.status(200).json({
+        message: 'Pago registrado pero no aprobado',
+        status: paymentStatus
+      });
+      return;
+    }
+ 
+    if (compra.estado === 'pagada') {
+      console.log('compra ya fue confirmada previamente');
+      res.status(200).json({ message: 'compra ya confirmada' });
+      return;
+    }
+ 
+    
+    await Compra.findByIdAndUpdate(
+      compra.id,
+      {
+        payment_id: paymentId,
+        payment_status: paymentStatus,
+        fecha_pago: new Date()
+      }
+    );
+ 
+    console.log('✅ Reserva confirmada exitosamente:', compra.id);
+    
+    res.status(200).json({
+      message: 'Reserva confirmada y stock actualizado',
+      reservaId: compra.id,
+      paymentId: paymentId
+    });
+ 
+  } catch (error) {
+    console.error('❌ Error en webhook MP:', error);
     res.status(500).json({ error: 'Error procesando webhook' });
   }
 });
@@ -162,7 +176,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       quantity: prod.cantidad,
       unit_price: prod.precio,
       id: String(prod.id),
-    }));
+    }));                                                                                                                                                                                                                                                                                                                                                                                                                         
 
     const envio = req.body.envio;
     if (envio && typeof envio === 'number' && envio > 0) {
