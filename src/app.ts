@@ -90,7 +90,7 @@ app.post('/webhook/mp', async (req, res) => {
     console.log('--- Webhook recibido ---');
     console.log('Body:', JSON.stringify(body, null, 2));
 
-  const paymentId = body.data?.id || body.payment_id || body.id || body.resource;
+    const paymentId = body.data?.id || body.payment_id || body.id || body.resource;
     const topic = body.type || body.topic;
 
     console.log('Payment ID:', paymentId);
@@ -110,30 +110,50 @@ app.post('/webhook/mp', async (req, res) => {
 
     const paymentData = await payment.get({ id: paymentId });
 
-    console.log('Datos del pago:', {
+    const paymentInfo = {
       id: paymentData.id,
       status: paymentData.status,
-      externalReference: paymentData.external_reference,
-      order: paymentData.order
-    });
+      status_detail: paymentData.status_detail,
+      external_reference: paymentData.external_reference,
+      order: paymentData.order,
+      payer: paymentData.payer,
+      transaction_amount: paymentData.transaction_amount,
+      payment_method_id: paymentData.payment_method_id,
+      payment_type_id: paymentData.payment_type_id,
+      date_approved: paymentData.date_approved,
+      date_created: paymentData.date_created,
+      date_last_updated: paymentData.date_last_updated,
+      additional_info: paymentData.additional_info,
+      metadata: paymentData.metadata
+    };
+    console.log('Datos completos del pago:', paymentInfo);
 
-    let preferenceId = undefined;
-    if (paymentData.order && paymentData.order.id) {
-      preferenceId = paymentData.order.id;
-    } else if (paymentData.id) {
-      preferenceId = paymentData.id;
+    let preferenceId: string | undefined = undefined;
+    if (paymentData.metadata && typeof paymentData.metadata === 'object' && 'preference_id' in paymentData.metadata) {
+      preferenceId = (paymentData.metadata as any).preference_id;
     }
-
-    if (!preferenceId) {
-      console.error('No se encontró preference_id en el pago');
-      res.status(400).json({ error: 'preference_id no encontrado' });
-      return;
+    if (!preferenceId && typeof paymentData.external_reference === 'string') {
+      preferenceId = paymentData.external_reference;
     }
+    const orderId = paymentData.order?.id;
 
-    const reserva = await Compra.findOne({ where: { preference_id: preferenceId } });
+    let reserva = null;
+    if (orderId) {
+      reserva = await Compra.findOne({ where: { order_id: orderId } });
+    }
+    if (!reserva && preferenceId) {
+      let extRef = preferenceId;
+      try {
+        const extObj = JSON.parse(preferenceId);
+        if (extObj && extObj.preference_id) {
+          extRef = extObj.preference_id;
+        }
+      } catch {}
+      reserva = await Compra.findOne({ where: { preference_id: extRef } });
+    }
 
     if (!reserva) {
-      console.error('Reserva no encontrada para preference_id:', preferenceId);
+      console.error('Reserva no encontrada para order_id/preference_id:', orderId, preferenceId);
       res.status(404).json({ error: 'Reserva no encontrada' });
       return;
     }
@@ -160,11 +180,12 @@ app.post('/webhook/mp', async (req, res) => {
       return;
     }
 
-
     await reserva.update({
       payment_id: paymentId,
       payment_status: paymentStatus,
-      fecha_pago: new Date()
+      fecha_pago: new Date(),
+      order_id: orderId || reserva.order_id,
+      preference_id: preferenceId || reserva.preference_id
     });
 
     console.log('✅ Reserva confirmada exitosamente:', reserva.id);
@@ -172,7 +193,8 @@ app.post('/webhook/mp', async (req, res) => {
     res.status(200).json({
       message: 'Reserva confirmada y stock actualizado',
       reservaId: reserva.id,
-      paymentId: paymentId
+      paymentId: paymentId,
+      paymentInfo
     });
 
   } catch (error) {
