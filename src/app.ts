@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -61,6 +61,29 @@ app.get('/perfil', verificarToken, (req, res) => {
 
 import axios from 'axios';
 
+const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
+const payment = new Payment(client);
+
+app.get('/payment/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const result = await payment.get({ id: paymentId });
+    
+    res.json({
+      status: result.status,
+      statusDetail: result.status_detail,
+      externalReference: result.external_reference,
+      transactionAmount: result.transaction_amount,
+      dateApproved: result.date_approved,
+      paymentMethod: result.payment_method_id,
+      details: result
+    });
+  } catch (error) {
+    console.error('Error al verificar pago:', error);
+    res.status(500).json({ error: 'Error al verificar el pago' });
+  }
+});
+
 app.post('/webhook/mp', async (req, res) => {
   try {
     const body = req.body;
@@ -85,7 +108,7 @@ app.post('/webhook/mp', async (req, res) => {
       return;
     }
  
-    const paymentData = await Carrito.get({ id: paymentId });
+    const paymentData = await payment.get({ id: paymentId });
     
     console.log('Datos del pago:', {
       id: paymentData.id,
@@ -102,17 +125,17 @@ app.post('/webhook/mp', async (req, res) => {
       return;
     }
  
-    const compra = await Compra.findById(externalReference);
+    const reserva = await Compra.findById(externalReference);
  
-    if (!compra) {
-      console.error('compra no encontrada para ID:', externalReference);
-      res.status(404).json({ error: 'compra no encontrada' });
+    if (!reserva) {
+      console.error('Reserva no encontrada para ID:', externalReference);
+      res.status(404).json({ error: 'Reserva no encontrada' });
       return;
     }
  
-    console.log('compra encontrada:', {
-      id: compra.id,
-      estado: compra.estado
+    console.log('Reserva encontrada:', {
+      id: reserva.id,
+      estado: reserva.estado
     });
  
     if (paymentStatus !== 'approved') {
@@ -124,15 +147,16 @@ app.post('/webhook/mp', async (req, res) => {
       return;
     }
  
-    if (compra.estado === 'pagada') {
-      console.log('compra ya fue confirmada previamente');
-      res.status(200).json({ message: 'compra ya confirmada' });
+    if (reserva.estado === 'pagada') {
+      console.log('Reserva ya fue confirmada previamente');
+      res.status(200).json({ message: 'Reserva ya confirmada' });
       return;
     }
  
+    //await confirmarCompra(reserva.id);
     
     await Compra.findByIdAndUpdate(
-      compra.id,
+      reserva.id,
       {
         payment_id: paymentId,
         payment_status: paymentStatus,
@@ -140,11 +164,11 @@ app.post('/webhook/mp', async (req, res) => {
       }
     );
  
-    console.log('✅ Reserva confirmada exitosamente:', compra.id);
+    console.log('✅ Reserva confirmada exitosamente:', reserva.id);
     
     res.status(200).json({
       message: 'Reserva confirmada y stock actualizado',
-      reservaId: compra.id,
+      reservaId: reserva.id,
       paymentId: paymentId
     });
  
@@ -154,7 +178,6 @@ app.post('/webhook/mp', async (req, res) => {
   }
 });
 
-const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
 
 app.post('/create-preference', verificarToken, async (req, res) => {
   try {
