@@ -90,7 +90,7 @@ app.post('/webhook/mp', async (req, res) => {
     console.log('--- Webhook recibido ---');
     console.log('Body:', JSON.stringify(body, null, 2));
 
-    const paymentId = body.data?.id || body.payment_id || body.id;
+  const paymentId = body.data?.id || body.payment_id || body.id || body.resource;
     const topic = body.type || body.topic;
 
     console.log('Payment ID:', paymentId);
