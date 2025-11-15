@@ -128,22 +128,8 @@ app.post('/webhook/mp', async (req, res) => {
     };
     console.log('Datos completos del pago:', paymentInfo);
 
-    let compraId = paymentData.external_reference;
-    let reserva = null;
-    if (compraId) {
-      reserva = await Compra.findByPk(Number(compraId));
-    }
-    if (!reserva) {
-      console.error('Reserva no encontrada para id:', compraId);
-      res.status(404).json({ error: 'Reserva no encontrada' });
-      return;
-    }
-
-    console.log('Reserva encontrada:', {
-      id: reserva.id,
-      estado: reserva.estado
-    });
-
+    // Buscar la compra por preference_id (id de la preferencia de MP)
+    let reserva = await Compra.findOne({ where: { preference_id: paymentData.id } });
     const paymentStatus = paymentData.status;
 
     if (paymentStatus !== 'approved') {
@@ -155,19 +141,45 @@ app.post('/webhook/mp', async (req, res) => {
       return;
     }
 
-    if (reserva.estado === 'pagada') {
-      console.log('Reserva ya fue confirmada previamente');
-      res.status(200).json({ message: 'Reserva ya confirmada' });
-      return;
+    // Si no existe la compra, la creamos usando los datos de metadata
+    if (!reserva) {
+      const meta = paymentData.metadata || {};
+      try {
+        reserva = await Compra.create({
+          productos: meta.productos,
+          idUsuario: meta.idUsuario,
+          total: meta.total,
+          nombre: meta.nombre,
+          apellido: meta.apellido,
+          direccion: meta.direccion,
+          dni: meta.dni,
+          telefono: meta.telefono,
+          email: meta.email,
+          envio: meta.envio,
+          estado: 'pagada',
+          preference_id: paymentData.id,
+          payment_id: paymentId,
+          fecha: new Date()
+        });
+        console.log('Compra creada desde webhook con metadata:', reserva.id);
+      } catch (err: any) {
+        console.error('Error creando compra desde webhook:', err);
+        res.status(500).json({ error: 'Error creando compra desde webhook', detalle: err?.message });
+        return;
+      }
+    } else {
+      if (reserva.estado === 'pagada') {
+        console.log('Reserva ya fue confirmada previamente');
+        res.status(200).json({ message: 'Reserva ya confirmada' });
+        return;
+      }
+      await reserva.update({
+        payment_id: paymentId,
+        payment_status: paymentStatus,
+        fecha_pago: new Date()
+      });
+      console.log('✅ Reserva confirmada exitosamente:', reserva.id);
     }
-
-    await reserva.update({
-      payment_id: paymentId,
-      payment_status: paymentStatus,
-      fecha_pago: new Date()
-    });
-
-    console.log('✅ Reserva confirmada exitosamente:', reserva.id);
 
     res.status(200).json({
       message: 'Reserva confirmada y stock actualizado',
@@ -227,35 +239,29 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       return;
     }
 
-    console.log('[create-preference] Creando compra pendiente...');
-    const compraPendiente = await Compra.create({
-      idUsuario: usuarioId,
-      productos: items,
-      total: req.body.total,
+    const preference = new Preference(client);
+    console.log('[create-preference] Creando preferencia de MercadoPago...');
+    const data = await preference.create({
+  body: {
+    items,
+    notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=...',
+    external_reference: String(usuarioId), 
+    metadata: {
       nombre: req.body.nombre,
       apellido: req.body.apellido,
       direccion: req.body.direccion,
       dni: req.body.dni,
       telefono: req.body.telefono,
       email: req.body.email,
+      productos: req.body.productos,
+      idUsuario: usuarioId,
       envio: req.body.envio,
-      estado: 'pendiente',
-    });
-    console.log('[create-preference] Compra pendiente creada. ID:', compraPendiente.id);
-
-    const preference = new Preference(client);
-    console.log('[create-preference] Creando preferencia de MercadoPago...');
-    const data = await preference.create({
-      body: {
-        items,
-        notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
-        external_reference: String(compraPendiente.id)
-      }
-    });
+      total: req.body.total
+    }
+  }
+});
     console.log('[create-preference] Preferencia creada. ID:', data.id, 'URL:', data.init_point);
 
-    await compraPendiente.update({ preference_id: data.id });
-    console.log('[create-preference] Compra actualizada con preference_id:', data.id);
 
     res.status(200).json({
       preference_id: data.id,
