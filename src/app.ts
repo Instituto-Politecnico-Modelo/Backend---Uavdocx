@@ -59,168 +59,43 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ message: 'Bienvenido al perfil', user: (req as any).user });
 });
 
-import axios from 'axios';
 
-const client = new MercadoPagoConfig({ accessToken: 'APP_USR-1138195044991057-091411-4e237673d5c4ee8d31f435ba92fecfd8-2686828519' });
+const client = new MercadoPagoConfig({ accessToken: tokenMP || '' });
 const payment = new Payment(client);
-
-app.get('/payment/:paymentId', async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    const result = await payment.get({ id: paymentId });
-    
-    res.json({
-      status: result.status,
-      statusDetail: result.status_detail,
-      externalReference: result.external_reference,
-      transactionAmount: result.transaction_amount,
-      dateApproved: result.date_approved,
-      paymentMethod: result.payment_method_id,
-      details: result
-    });
-  } catch (error) {
-    console.error('Error al verificar pago:', error);
-    res.status(500).json({ error: 'Error al verificar el pago' });
-  }
-});
-
-app.post('/webhook/mp', async (req, res) => {
-  try {
-    const body = req.body;
-    console.log('--- Webhook recibido ---');
-    console.log('Body:', JSON.stringify(body, null, 2));
-
-    const paymentId = body.data?.id || body.payment_id || body.id || body.resource;
-    const topic = body.type || body.topic;
-
-    console.log('Payment ID:', paymentId);
-    console.log('Topic:', topic);
-
-    if (!['payment', 'payment.created', 'payment.updated'].includes(topic)) {
-      console.log('Evento no es de tipo payment, se ignora');
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    if (!paymentId) {
-      console.error('No se encontró payment ID en el webhook');
-      res.status(400).json({ error: 'Payment ID no encontrado' });
-      return;
-    }
-
-    const paymentData = await payment.get({ id: paymentId });
-
-    const paymentInfo = {
-      id: paymentData.id,
-      status: paymentData.status,
-      status_detail: paymentData.status_detail,
-      external_reference: paymentData.external_reference,
-      order: paymentData.order,
-      payer: paymentData.payer,
-      transaction_amount: paymentData.transaction_amount,
-      payment_method_id: paymentData.payment_method_id,
-      payment_type_id: paymentData.payment_type_id,
-      date_approved: paymentData.date_approved,
-      date_created: paymentData.date_created,
-      date_last_updated: paymentData.date_last_updated,
-      additional_info: paymentData.additional_info,
-      metadata: paymentData.metadata
-    };
-    console.log('Datos completos del pago:', paymentInfo);
-
-    // Buscar la compra por preference_id (id de la preferencia de MP)
-    let reserva = await Compra.findOne({ where: { preference_id: paymentData.id } });
-    const paymentStatus = paymentData.status;
-
-    if (paymentStatus !== 'approved') {
-      console.log('Pago no aprobado. Estado:', paymentStatus);
-      res.status(200).json({
-        message: 'Pago registrado pero no aprobado',
-        status: paymentStatus
-      });
-      return;
-    }
-
-    // Si no existe la compra, la creamos usando los datos de metadata
-    if (!reserva) {
-      const meta = paymentData.metadata || {};
-      try {
-        reserva = await Compra.create({
-          productos: meta.productos,
-          idUsuario: meta.idUsuario,
-          total: meta.total,
-          nombre: meta.nombre,
-          apellido: meta.apellido,
-          direccion: meta.direccion,
-          dni: meta.dni,
-          telefono: meta.telefono,
-          email: meta.email,
-          envio: meta.envio,
-          estado: 'pagada',
-          preference_id: paymentData.id,
-          payment_id: paymentId,
-          fecha: new Date()
-        });
-        console.log('Compra creada desde webhook con metadata:', reserva.id);
-      } catch (err: any) {
-        console.error('Error creando compra desde webhook:', err);
-        res.status(500).json({ error: 'Error creando compra desde webhook', detalle: err?.message });
-        return;
-      }
-    } else {
-      if (reserva.estado === 'pagada') {
-        console.log('Reserva ya fue confirmada previamente');
-        res.status(200).json({ message: 'Reserva ya confirmada' });
-        return;
-      }
-      await reserva.update({
-        payment_id: paymentId,
-        payment_status: paymentStatus,
-        fecha_pago: new Date()
-      });
-      console.log('✅ Reserva confirmada exitosamente:', reserva.id);
-    }
-
-    res.status(200).json({
-      message: 'Reserva confirmada y stock actualizado',
-      reservaId: reserva.id,
-      paymentId: paymentId,
-      paymentInfo
-    });
-
-  } catch (error) {
-    console.error('❌ Error en webhook MP:', error);
-    res.status(500).json({ error: 'Error procesando webhook' });
-  }
-});
-
 
 app.post('/create-preference', verificarToken, async (req, res) => {
   try {
+    console.log('\n========== INICIO CREATE PREFERENCE ==========');
     const usuarioId = (req as any).user?.id;
     console.log('[create-preference] Usuario autenticado:', usuarioId);
+    console.log('[create-preference] Body recibido:', JSON.stringify(req.body, null, 2));
+    
     if (!usuarioId) {
-      console.log('[create-preference] Usuario no autenticado');
+      console.log('❌ [create-preference] Usuario no autenticado');
       res.status(401).json({ error: 'Usuario no autenticado' });
       return;
     }
 
+    console.log('[create-preference] Buscando carrito para usuario:', usuarioId);
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
     console.log('[create-preference] Carrito encontrado:', !!carrito);
+    
     if (!carrito) {
-      console.log('[create-preference] Carrito no encontrado para usuario:', usuarioId);
+      console.log('❌ [create-preference] Carrito no encontrado para usuario:', usuarioId);
       res.status(404).json({ error: 'Carrito no encontrado' });
       return;
     }
 
     const productos = (carrito.get('productos') || {});
+    console.log('[create-preference] Productos en carrito:', JSON.stringify(productos, null, 2));
+    
     const items = Object.values(productos).map((prod: any) => ({
       title: prod.nombre || `Producto ${prod.id}`,
       quantity: prod.cantidad,
       unit_price: prod.precio,
       id: String(prod.id),
     }));
-    console.log('[create-preference] Items del carrito:', items);
+    console.log('[create-preference] Items mapeados:', JSON.stringify(items, null, 2));
 
     const envio = req.body.envio;
     if (envio && typeof envio === 'number' && envio > 0) {
@@ -230,45 +105,191 @@ app.post('/create-preference', verificarToken, async (req, res) => {
         unit_price: envio,
         id: 'envio'
       });
-      console.log('[create-preference] Item de envío agregado:', envio);
+      console.log('[create-preference] ✅ Item de envío agregado:', envio);
     }
 
     if (items.length === 0) {
-      console.log('[create-preference] El carrito está vacío');
+      console.log('❌ [create-preference] El carrito está vacío');
       res.status(400).json({ error: 'El carrito está vacío' });
       return;
     }
 
+    // Validar datos del destinatario
+    const { nombre, apellido, direccion, dni, telefono, email, productos: productosBody } = req.body;
+    console.log('[create-preference] Validando datos del destinatario...');
+    console.log('  - nombre:', nombre);
+    console.log('  - apellido:', apellido);
+    console.log('  - direccion:', direccion);
+    console.log('  - dni:', dni);
+    console.log('  - telefono:', telefono);
+    console.log('  - email:', email);
+    console.log('  - productos:', productosBody ? 'OK' : 'FALTA');
+    
+    if (!nombre || !apellido || !direccion || !dni || !telefono || !email || !productosBody) {
+      console.log('❌ [create-preference] Faltan datos del destinatario');
+      res.status(400).json({ error: 'Todos los datos del destinatario son requeridos' });
+      return;
+    }
+
+    // Crear la compra en estado pendiente antes de la preferencia
+    console.log('[create-preference] ✅ Todos los datos presentes. Creando compra pendiente...');
+    const compraPendiente = await Compra.create({
+      idUsuario: usuarioId,
+      productos: productosBody,
+      total: req.body.total,
+      nombre: nombre,
+      apellido: apellido,
+      direccion: direccion,
+      dni: dni,
+      telefono: telefono,
+      email: email,
+      envio: req.body.envio,
+      estado: 'pendiente',
+    });
+    console.log('[create-preference] ✅ Compra pendiente creada. ID:', compraPendiente.id);
+
     const preference = new Preference(client);
     console.log('[create-preference] Creando preferencia de MercadoPago...');
+    console.log('  - external_reference:', compraPendiente.id);
+    console.log('  - items:', items.length);
+    
     const data = await preference.create({
       body: {
         items,
-        notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=...',
-        external_reference: String(usuarioId),
-        metadata: {
-          nombre: req.body.nombre,
-          apellido: req.body.apellido,
-          direccion: req.body.direccion,
-          dni: req.body.dni,
-          telefono: req.body.telefono,
-          email: req.body.email,
-          productos: req.body.productos,
-          id_usuario: usuarioId,
-          envio: req.body.envio,
-          total: req.body.total
-        }
+        notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
+        external_reference: String(compraPendiente.id)
       }
     });
-    console.log('[create-preference] Preferencia creada. ID:', data.id, 'URL:', data.init_point);
+    console.log('[create-preference] ✅ Preferencia creada. ID:', data.id);
+    console.log('[create-preference] URL de pago:', data.init_point);
 
+    await compraPendiente.update({ preference_id: data.id });
+    console.log('[create-preference] ✅ Compra actualizada con preference_id:', data.id);
+    console.log('========== FIN CREATE PREFERENCE (ÉXITO) ==========\n');
 
     res.status(200).json({
       preference_id: data.id,
       preference_url: data.init_point,
     });
   } catch (error) {
-    console.error('Error en /create-preference:', error);
-    res.status(500).json({ error: 'Error al crear la preferencia', detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) });
+    console.error('❌ ========== ERROR EN CREATE PREFERENCE ==========');
+    console.error('Tipo de error:', error?.constructor?.name);
+    console.error('Mensaje:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
+    console.error('Stack:', error && typeof error === 'object' && 'stack' in error ? (error as any).stack : 'No stack');
+    console.error('Error completo:', error);
+    console.error('========== FIN ERROR ==========\n');
+    res.status(500).json({ 
+      error: 'Error al crear la preferencia', 
+      detalle: (error && typeof error === 'object' && 'message' in error) ? (error as any).message : String(error) 
+    });
   }
 });
+ 
+
+ 
+app.post('/webhook/mp', async (req, res) => {
+  try {
+    console.log('\n========== WEBHOOK MERCADOPAGO RECIBIDO ==========');
+    const body = req.body;
+    console.log('[webhook] Body completo:', JSON.stringify(body, null, 2));
+
+    const paymentId = body.data?.id || body.payment_id || body.id || body.resource;
+    const topic = body.type || body.topic;
+
+    console.log('[webhook] Payment ID extraído:', paymentId);
+    console.log('[webhook] Topic:', topic);
+
+    if (!['payment', 'payment.created', 'payment.updated'].includes(topic)) {
+      console.log('[webhook] ⚠️ Evento ignorado (no es payment):', topic);
+      res.status(200).json({ received: true });
+      return;
+    }
+
+    if (!paymentId) {
+      console.error('❌ [webhook] No se encontró payment ID en el webhook');
+      console.error('[webhook] Body recibido:', body);
+      res.status(400).json({ error: 'Payment ID no encontrado' });
+      return;
+    }
+
+    console.log('[webhook] Consultando datos del pago en MercadoPago...');
+    const paymentData = await payment.get({ id: paymentId });
+
+    console.log('[webhook] ✅ Datos del pago obtenidos:');
+    console.log('  - ID:', paymentData.id);
+    console.log('  - Status:', paymentData.status);
+    console.log('  - External Reference:', paymentData.external_reference);
+    console.log('  - Order ID:', paymentData.order?.id);
+    console.log('  - Amount:', paymentData.transaction_amount);
+
+    const externalReference = paymentData.external_reference;
+    const paymentStatus = paymentData.status;
+
+    if (!externalReference) {
+      console.error('❌ [webhook] No se encontró external_reference en el pago');
+      console.error('[webhook] Payment data:', paymentData);
+      res.status(400).json({ error: 'External reference no encontrado' });
+      return;
+    }
+
+    console.log('[webhook] Buscando compra con ID:', externalReference);
+    const compra = await Compra.findByPk(Number(externalReference));
+
+    if (!compra) {
+      console.error('❌ [webhook] Compra no encontrada para ID:', externalReference);
+      res.status(404).json({ error: 'Compra no encontrada' });
+      return;
+    }
+
+    console.log('[webhook] ✅ Compra encontrada:');
+    console.log('  - ID:', compra.id);
+    console.log('  - Estado actual:', compra.estado);
+    console.log('  - Usuario:', compra.idUsuario);
+    console.log('  - Total:', compra.total);
+    console.log('  - Email:', compra.email);
+
+    if (paymentStatus !== 'approved') {
+      console.log('[webhook] ⚠️ Pago no aprobado. Estado:', paymentStatus);
+      res.status(200).json({
+        message: 'Pago registrado pero no aprobado',
+        status: paymentStatus
+      });
+      return;
+    }
+
+    if (compra.estado === 'pagada') {
+      console.log('[webhook] ⚠️ Compra ya fue confirmada previamente');
+      res.status(200).json({ message: 'Compra ya confirmada' });
+      return;
+    }
+
+    console.log('[webhook] 💰 Pago aprobado. Confirmando compra...');
+    await confirmarCompra(compra.id);
+    console.log('[webhook] ✅ confirmarCompra() ejecutado');
+
+    await compra.update({
+      payment_id: paymentId,
+      order_id: paymentData.order?.id
+    });
+    console.log('[webhook] ✅ Compra actualizada con payment_id y order_id');
+
+    console.log('[webhook] ✅✅✅ Compra confirmada exitosamente:', compra.id);
+    console.log('========== FIN WEBHOOK (ÉXITO) ==========\n');
+
+    res.status(200).json({
+      message: 'Compra confirmada y stock actualizado',
+      compraId: compra.id,
+      paymentId: paymentId
+    });
+
+  } catch (error) {
+    console.error('\n❌ ========== ERROR EN WEBHOOK ==========');
+    console.error('[webhook] Tipo de error:', error?.constructor?.name);
+    console.error('[webhook] Mensaje:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
+    console.error('[webhook] Stack:', error && typeof error === 'object' && 'stack' in error ? (error as any).stack : 'No stack');
+    console.error('[webhook] Error completo:', error);
+    console.error('========== FIN ERROR WEBHOOK ==========\n');
+    res.status(500).json({ error: 'Error procesando webhook' });
+  }
+});
+ 
