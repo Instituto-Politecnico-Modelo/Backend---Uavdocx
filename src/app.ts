@@ -284,6 +284,15 @@ app.post('/webhook/mp', async (req, res) => {
     });
     console.log('[webhook] ✅ Compra actualizada con payment_id y order_id');
 
+    // Vaciar el carrito del usuario
+    const idUsuario = compra.get('idUsuario');
+    console.log('[webhook] Vaciando carrito del usuario:', idUsuario);
+    const carritoUsuario = await Carrito.findOne({ where: { idUsuario } });
+    if (carritoUsuario) {
+      await carritoUsuario.update({ productos: {}, precioTotal: 0 });
+      console.log('[webhook] ✅ Carrito vaciado');
+    }
+
     console.log('[webhook] ✅✅✅ Compra confirmada exitosamente:', compra.id);
     console.log('========== FIN WEBHOOK (ÉXITO) ==========\n');
 
