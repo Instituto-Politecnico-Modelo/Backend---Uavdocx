@@ -128,32 +128,13 @@ app.post('/webhook/mp', async (req, res) => {
     };
     console.log('Datos completos del pago:', paymentInfo);
 
-    let preferenceId: string | undefined = undefined;
-    if (paymentData.metadata && typeof paymentData.metadata === 'object' && 'preference_id' in paymentData.metadata) {
-      preferenceId = (paymentData.metadata as any).preference_id;
-    }
-    if (!preferenceId && typeof paymentData.external_reference === 'string') {
-      preferenceId = paymentData.external_reference;
-    }
-    const orderId = paymentData.order?.id;
-
+    let compraId = paymentData.external_reference;
     let reserva = null;
-    if (orderId) {
-      reserva = await Compra.findOne({ where: { order_id: orderId } });
+    if (compraId) {
+      reserva = await Compra.findByPk(Number(compraId));
     }
-    if (!reserva && preferenceId) {
-      let extRef = preferenceId;
-      try {
-        const extObj = JSON.parse(preferenceId);
-        if (extObj && extObj.preference_id) {
-          extRef = extObj.preference_id;
-        }
-      } catch {}
-      reserva = await Compra.findOne({ where: { preference_id: extRef } });
-    }
-
     if (!reserva) {
-      console.error('Reserva no encontrada para order_id/preference_id:', orderId, preferenceId);
+      console.error('Reserva no encontrada para id:', compraId);
       res.status(404).json({ error: 'Reserva no encontrada' });
       return;
     }
@@ -183,9 +164,7 @@ app.post('/webhook/mp', async (req, res) => {
     await reserva.update({
       payment_id: paymentId,
       payment_status: paymentStatus,
-      fecha_pago: new Date(),
-      order_id: orderId || reserva.order_id,
-      preference_id: preferenceId || reserva.preference_id
+      fecha_pago: new Date()
     });
 
     console.log('✅ Reserva confirmada exitosamente:', reserva.id);
@@ -207,13 +186,17 @@ app.post('/webhook/mp', async (req, res) => {
 app.post('/create-preference', verificarToken, async (req, res) => {
   try {
     const usuarioId = (req as any).user?.id;
+    console.log('[create-preference] Usuario autenticado:', usuarioId);
     if (!usuarioId) {
+      console.log('[create-preference] Usuario no autenticado');
       res.status(401).json({ error: 'Usuario no autenticado' });
       return;
     }
 
     const carrito = await Carrito.findOne({ where: { idUsuario: usuarioId } });
+    console.log('[create-preference] Carrito encontrado:', !!carrito);
     if (!carrito) {
+      console.log('[create-preference] Carrito no encontrado para usuario:', usuarioId);
       res.status(404).json({ error: 'Carrito no encontrado' });
       return;
     }
@@ -224,7 +207,8 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       quantity: prod.cantidad,
       unit_price: prod.precio,
       id: String(prod.id),
-    }));                                                                                                                                                                                                                                                                                                                                                                                                                         
+    }));
+    console.log('[create-preference] Items del carrito:', items);
 
     const envio = req.body.envio;
     if (envio && typeof envio === 'number' && envio > 0) {
@@ -234,30 +218,44 @@ app.post('/create-preference', verificarToken, async (req, res) => {
         unit_price: envio,
         id: 'envio'
       });
+      console.log('[create-preference] Item de envío agregado:', envio);
     }
 
     if (items.length === 0) {
+      console.log('[create-preference] El carrito está vacío');
       res.status(400).json({ error: 'El carrito está vacío' });
       return;
     }
 
+    console.log('[create-preference] Creando compra pendiente...');
+    const compraPendiente = await Compra.create({
+      idUsuario: usuarioId,
+      productos: items,
+      total: req.body.total,
+      nombre: req.body.nombre,
+      apellido: req.body.apellido,
+      direccion: req.body.direccion,
+      dni: req.body.dni,
+      telefono: req.body.telefono,
+      email: req.body.email,
+      envio: req.body.envio,
+      estado: 'pendiente',
+    });
+    console.log('[create-preference] Compra pendiente creada. ID:', compraPendiente.id);
+
     const preference = new Preference(client);
+    console.log('[create-preference] Creando preferencia de MercadoPago...');
     const data = await preference.create({
       body: {
         items,
         notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=d86f69ff80e1888d3ea4a654b2655886f527149a021d80d2b02c78cd458f0480',
-        external_reference: JSON.stringify({
-          usuarioId,
-          envio,
-          total: req.body.total
-        })
+        external_reference: String(compraPendiente.id)
       }
     });
+    console.log('[create-preference] Preferencia creada. ID:', data.id, 'URL:', data.init_point);
 
-    await Compra.update(
-      { preference_id: data.id },
-      { where: { idUsuario: usuarioId, estado: 'pendiente' } }
-    );
+    await compraPendiente.update({ preference_id: data.id });
+    console.log('[create-preference] Compra actualizada con preference_id:', data.id);
 
     res.status(200).json({
       preference_id: data.id,
