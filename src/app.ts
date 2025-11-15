@@ -242,24 +242,24 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     const preference = new Preference(client);
     console.log('[create-preference] Creando preferencia de MercadoPago...');
     const data = await preference.create({
-  body: {
-    items,
-    notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=...',
-    external_reference: String(usuarioId), 
-    metadata: {
-      nombre: req.body.nombre,
-      apellido: req.body.apellido,
-      direccion: req.body.direccion,
-      dni: req.body.dni,
-      telefono: req.body.telefono,
-      email: req.body.email,
-      productos: req.body.productos,
-      idUsuario: usuarioId,
-      envio: req.body.envio,
-      total: req.body.total
-    }
-  }
-});
+      body: {
+        items,
+        notification_url: 'https://uavdocx-back.policloudservices.ipm.edu.ar/webhook/mp?key=...',
+        external_reference: String(usuarioId),
+        metadata: {
+          nombre: req.body.nombre,
+          apellido: req.body.apellido,
+          direccion: req.body.direccion,
+          dni: req.body.dni,
+          telefono: req.body.telefono,
+          email: req.body.email,
+          productos: req.body.productos,
+          id_usuario: usuarioId,
+          envio: req.body.envio,
+          total: req.body.total
+        }
+      }
+    });
     console.log('[create-preference] Preferencia creada. ID:', data.id, 'URL:', data.init_point);
 
 
