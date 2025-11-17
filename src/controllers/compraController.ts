@@ -68,6 +68,7 @@ export async function confirmarCompra(idCompra: number) {
         }
         if (compra.get('estado') === 'pagada') {
             console.warn('[confirmarCompra] La compra ya está confirmada:', idCompra);
+            await t.rollback();
             throw new Error('La compra ya está confirmada');
         }
         const productos = compra.get('productos') as any[];

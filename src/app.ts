@@ -115,7 +115,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     }
 
     // Validar datos del destinatario
-    const { nombre, apellido, direccion, dni, telefono, email, productos: productosBody } = req.body;
+    const { nombre, apellido, direccion, dni, telefono, email, productos: productosBody, opcionEntrega } = req.body;
     console.log('[create-preference] Validando datos del destinatario...');
     console.log('  - nombre:', nombre);
     console.log('  - apellido:', apellido);
@@ -123,16 +123,27 @@ app.post('/create-preference', verificarToken, async (req, res) => {
     console.log('  - dni:', dni);
     console.log('  - telefono:', telefono);
     console.log('  - email:', email);
+    console.log('  - opcionEntrega:', opcionEntrega);
     console.log('  - productos:', productosBody ? 'OK' : 'FALTA');
     
-    if (!nombre || !apellido || !direccion || !dni || !telefono || !email || !productosBody) {
+    if (!nombre || !apellido || !direccion || !dni || !telefono || !email || !productosBody || !opcionEntrega) {
       console.log('❌ [create-preference] Faltan datos del destinatario');
-      res.status(400).json({ error: 'Todos los datos del destinatario son requeridos' });
+      res.status(400).json({ error: 'Todos los datos del destinatario son requeridos (incluye opción de entrega)' });
+      return;
+    }
+
+    // Validar que opcionEntrega sea un valor válido del ENUM
+    const opcionesValidas = ['MOTOMENSAJERIA', 'CORREOARGENTINO', 'PUDO', 'OCA', 'SUCURSAL'];
+    if (!opcionesValidas.includes(opcionEntrega)) {
+      console.log('❌ [create-preference] Opción de entrega inválida:', opcionEntrega);
+      res.status(400).json({ error: 'Opción de entrega inválida' });
       return;
     }
 
     // Crear la compra en estado pendiente antes de la preferencia
     console.log('[create-preference] ✅ Todos los datos presentes. Creando compra pendiente...');
+    console.log('[create-preference] Valor de envío para guardar:', opcionEntrega);
+    
     const compraPendiente = await Compra.create({
       idUsuario: usuarioId,
       productos: productosBody,
@@ -143,7 +154,7 @@ app.post('/create-preference', verificarToken, async (req, res) => {
       dni: dni,
       telefono: telefono,
       email: email,
-      envio: req.body.envio,
+      envio: opcionEntrega,
       estado: 'pendiente',
     });
     console.log('[create-preference] ✅ Compra pendiente creada. ID:', compraPendiente.id);
@@ -272,6 +283,15 @@ app.post('/webhook/mp', async (req, res) => {
       order_id: paymentData.order?.id
     });
     console.log('[webhook] ✅ Compra actualizada con payment_id y order_id');
+
+    // Vaciar el carrito del usuario
+    const idUsuario = compra.get('idUsuario');
+    console.log('[webhook] Vaciando carrito del usuario:', idUsuario);
+    const carritoUsuario = await Carrito.findOne({ where: { idUsuario } });
+    if (carritoUsuario) {
+      await carritoUsuario.update({ productos: {}, precioTotal: 0 });
+      console.log('[webhook] ✅ Carrito vaciado');
+    }
 
     console.log('[webhook] ✅✅✅ Compra confirmada exitosamente:', compra.id);
     console.log('========== FIN WEBHOOK (ÉXITO) ==========\n');
